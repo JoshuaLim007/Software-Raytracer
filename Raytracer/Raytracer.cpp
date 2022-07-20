@@ -5,6 +5,7 @@
 #include <chrono>
 #include <math.h>
 #include <vector>
+#include <thread>
 
 #undef main
 
@@ -150,25 +151,27 @@ struct Rayhit {
 };
 
 float3 SunDirection = float3(0, 1, .5);
-Color SkyColor = Color(0.4, 1.2, 2);
-Color GroundColor = Color(.1f, .2f, .3f);
+Color SkyColor = Color(.5, 1, 2);
+Color GroundColor = Color(.05f, .06f, .1f);
 Color SunColor = Color(1.0f, 1.0f, 1.0f);
 
-void set_pixel(const int& x, const int& y, const Color& color) {
 
-	Uint32* targetPixel = (Uint32*)((Uint8*)MAINSCREEN->pixels + (SCREEN_HEIGHT - 1 - y) * MAINSCREEN->pitch + x * MAINSCREEN->format->BytesPerPixel);
+void set_pixel(const int& x, const int& y, const Color& color, const SDL_Surface* surface) {
+
+	Uint32* targetPixel = (Uint32*)((Uint8*)surface->pixels + (SCREEN_HEIGHT - 1 - y) * surface->pitch + x * surface->format->BytesPerPixel);
 
 	*targetPixel = color;
 }
+
 Color get_environment_color(const float3& rayDirection) {
 	auto halfColor = Color::Lerp(GroundColor, SkyColor, 0.5f);
 	float upd = float3::Dot(rayDirection, WORLDUP);
 	if (upd > 0) {
-		return Color::Lerp(halfColor, SkyColor, upd);
+		return Color::Lerp(halfColor, SkyColor, powf(upd, 0.25f));
 	}
 	else {
 		upd = fabsf(upd);
-		return Color::Lerp(halfColor, GroundColor, upd);
+		return Color::Lerp(halfColor, GroundColor, powf(upd, 0.25f));
 	}
 }
 
@@ -218,7 +221,7 @@ private:
 		return sr;
 	}
 protected:
-	virtual Rayhit Raytrace(const float3& rayOrigin, const float3& rayDir) {
+	virtual Rayhit Raytrace(const float3& rayOrigin, const float3& rayDir) const{
 		return Rayhit();
 	}
 
@@ -280,7 +283,7 @@ public:
 			auto reflectionRay = rayDirection.Reflect(hit.normal);
 			auto reflectionObject = GetClosestObject(hit.point + hit.normal * 0.05f, reflectionRay);
 			if (reflectionObject.valid) {
-				reflectionColor = reflectionObject.color;
+				reflectionColor = Color(0,0,0);
 			}
 			else {
 				reflectionColor = get_environment_color(reflectionRay);
@@ -316,7 +319,7 @@ public:
 
 float3 Object::UP = float3(0, 1, 0);
 int Object::MaxRaytraceBounces = 1;
-int Object::SamplesPerRay = 16;
+int Object::SamplesPerRay = 1;
 char Object::RaytraceRenderMode = 0;
 std::vector<Object*> Object::allObjects = std::vector<Object*>();
 
@@ -346,7 +349,7 @@ private:
 		Color& outColor,
 		float3& outNormal,
 		float3& outPosition,
-		float& outDistance)
+		float& outDistance) const 
 	{
 		outDistance = (std::numeric_limits<float>().infinity());
 		float3 directionToSphere = spherePosition - rayPosition;
@@ -377,7 +380,7 @@ private:
 		return true;
 	}
 public:
-	Rayhit Raytrace(const float3& rayOrigin, const float3& rayDir) override {
+	Rayhit Raytrace(const float3& rayOrigin, const float3& rayDir) const override {
 
 		Color color;
 		float3 normal, hitPoint;
@@ -419,6 +422,64 @@ float3 GetRayDirection(const Transform& cameraTransform, const int& pixelX, cons
 	return pos;
 }
 
+void renderQuadrant (int quadrant, int raytraceSamples, const Transform *camera){
+
+	//min inclusive
+	//max exclusive
+	int xRangeMin = 0, xRangeMax = 0;
+	int yRangeMin = 0, yRangeMax = 0;
+	switch (quadrant)
+	{
+	case(1):
+		xRangeMin = (SCREEN_WIDTH / 2);
+		xRangeMax = SCREEN_WIDTH;
+
+		yRangeMin = (SCREEN_HEIGHT / 2);
+		yRangeMax = SCREEN_HEIGHT;
+		break;
+	case(2):
+		xRangeMin = 0;
+		xRangeMax = (SCREEN_WIDTH / 2);
+
+		yRangeMin = (SCREEN_HEIGHT / 2);
+		yRangeMax = SCREEN_HEIGHT;
+		break;
+	case(3):
+		xRangeMin = 0;
+		xRangeMax = (SCREEN_WIDTH / 2);
+
+		yRangeMin = 0;
+		yRangeMax = (SCREEN_HEIGHT / 2);
+		break;
+	case(4):
+		xRangeMin = (SCREEN_WIDTH / 2);
+		xRangeMax = SCREEN_WIDTH;
+
+		yRangeMin = 0;
+		yRangeMax = (SCREEN_HEIGHT / 2);
+		break;
+	default:
+		return;
+	}
+	
+	
+	SDL_Surface* renderTarget = MAINSCREEN;
+	void* pixels = renderTarget->pixels;
+	int pitch = renderTarget->pitch;
+	Uint8 bytesPerPixel = renderTarget->format->BytesPerPixel;
+
+	for (size_t i = 0; i < raytraceSamples; i++)
+	{
+		int randX = rand() % (xRangeMax - 1) + xRangeMin;
+		int randY = rand() % (yRangeMax - 1) + yRangeMin;
+		float3 rayDirection = GetRayDirection(*camera, randX, randY);
+		auto color = Object::RaytraceScene((*camera).position, rayDirection);
+		Uint32* targetPixel = (Uint32*)((Uint8*)pixels + (SCREEN_HEIGHT - 1 - randY) * pitch + randX * bytesPerPixel);
+		*targetPixel = color;
+	}
+};
+
+
 int main()
 {
 	srand(0);
@@ -447,7 +508,7 @@ int main()
 	float time = 0;
 	float delta = 0;
 
-	const int raytraceSamples = 4096 * .5;
+	const int raytraceSamples = 4096 * 3;
 	int mouseX = 0;
 	int mouseY = 0;
 	float mouseSpeed = 0.0005;
@@ -510,44 +571,41 @@ int main()
 			}
 
 
-			for (size_t i = 0; i < SCREEN_WIDTH; i++)
-			{
-				for (size_t j = 0; j < SCREEN_HEIGHT; j++)
-				{
-					int randX = i;
-					int randY = j;
-					float3 rayDirection = GetRayDirection(camera, randX, randY);
-					auto color = Object::RaytraceScene(camera.position, rayDirection);
-					set_pixel(randX, randY, color);
-				}
-			}
-			pause = true;
+			//for (size_t i = 0; i < SCREEN_WIDTH; i++)
+			//{
+			//	for (size_t j = 0; j < SCREEN_HEIGHT; j++)
+			//	{
+			//		int randX = i;
+			//		int randY = j;
+			//		float3 rayDirection = GetRayDirection(camera, randX, randY);
+			//		auto color = Object::RaytraceScene(camera.position, rayDirection);
+			//		set_pixel(randX, randY, color);
+			//	}
+			//}
+			//pause = true;
+
+			//create 4 threads
+			//each thread will work on different quadrants of the screen
+			std::thread q1(renderQuadrant, 1, raytraceSamples, &camera);
+			//std::thread q2(renderQuadrant, 2, raytraceSamples, &camera);
+			//std::thread q3(renderQuadrant, 3, raytraceSamples, &camera);
+			//std::thread q4(renderQuadrant, 4, raytraceSamples, &camera);
+
+			q1.join();
+			//q2.join();
+			//q3.join();
+			//q4.join();
+
 			//for (size_t i = 0; i < raytraceSamples; i++)
 			//{
 			//	int randX = rand() % SCREEN_WIDTH;
 			//	int randY = rand() % SCREEN_HEIGHT;
 			//	float3 rayDirection = GetRayDirection(camera, randX, randY);
-			//	auto color = Object::RaytraceScene(camera.position, rayDirection);
-			//	//float shortestDistance = std::numeric_limits<float>::infinity();
-			//	//bool hitOnce = false;
-			//	//for (size_t j = 0; j < Object::allObjects.size(); j++)
-			//	//{
-			//	//	if (Object::allObjects[j]->Raytrace(0, camera.position, ray, color, normal, position, renderDistance)) {
-			//	//		if (renderDistance < shortestDistance) {
-			//	//			shortestDistance = renderDistance;
-			//	//			closestColor = color;
-			//	//		}
-			//	//		hitOnce = true;
-			//	//	}
-			//	//}
-			//	//if (hitOnce) {
-			//	//	set_pixel(randX, randY, closestColor);
-			//	//}
-			//	//else {
-			//	//	set_pixel(randX, randY, Color(255, 255, 255));
-			//	//}
+			//	auto color = Object::RaytraceScene(camera.position, rayDirection);			
+			//	//set_pixel(randX, randY, color, MAINSCREEN);
 			//
-			//	set_pixel(randX, randY, color);
+			//	Uint32* targetPixel = (Uint32*)((Uint8*)MAINSCREEN->pixels + (SCREEN_HEIGHT - 1 - randY) * MAINSCREEN->pitch + randX * MAINSCREEN->format->BytesPerPixel);
+			//	*targetPixel = color;
 			//}
 
 			SDL_UpdateWindowSurface(window);
@@ -557,11 +615,11 @@ int main()
 		frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 		delta = frametime / 1000.0f;
 		time += delta;
-		//printf("Time(s): %.2f\n", time);
+		printf("Time(s): %.2f\n", time);
 
 		fps = (frametime > 0) ? 1000.0f / frametime : 10000;
-		//printf("frametime(ms): %.0f\n", frametime);
-		//printf("fps: %.3f\n", fps);
+		printf("frametime(ms): %.0f\n", frametime);
+		printf("fps: %.3f\n", fps);
 
 	}
 
@@ -571,14 +629,3 @@ int main()
 	SDL_Quit();
 	return 0;
 }
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
