@@ -6,8 +6,13 @@
 #include <math.h>
 #include <vector>
 #include <thread>
+#include <random>
+#include <functional>
+#include <Windows.h>
 
 #undef main
+
+#define MULTITHREAD
 
 using std::cout; using std::endl;
 using std::chrono::duration_cast;
@@ -15,12 +20,12 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
+const int THREADS = 4;
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
-SDL_Surface* MAINSCREEN;
 
 struct float3 {
 	float x, y, z;
@@ -422,60 +427,119 @@ float3 GetRayDirection(const Transform& cameraTransform, const int& pixelX, cons
 	return pos;
 }
 
-void renderQuadrant (int quadrant, int raytraceSamples, const Transform *camera){
+
+std::uniform_int_distribution<int>* dice_distribution = new std::uniform_int_distribution<int>(0, INT_MAX);
+//std::mt19937* rnd1 = new std::mt19937();
+//std::mt19937* rnd2 = new std::mt19937();
+//std::mt19937* rnd3 = new std::mt19937();
+//std::mt19937* rnd4 = new std::mt19937();
+//auto rand1 = std::bind(*dice_distribution, *rnd1);
+//auto rand2 = std::bind(*dice_distribution, *rnd2);
+//auto rand3 = std::bind(*dice_distribution, *rnd3);
+//auto rand4 = std::bind(*dice_distribution, *rnd4);
+//bool finished1 = false;
+//bool finished2 = false;
+//bool finished3 = false;
+//bool finished4 = false;
+
+bool suspendAllThreads = false;
+
+//void renderQuadrant (uint8_t quadrant, unsigned int raytraceSamples, const Transform *camera, SDL_Surface* renderTexture){
+//
+//	//min inclusive
+//	//max exclusive
+//
+//	auto* rand = &rand1;
+//	bool *waitFlag;
+//	int xRangeMin = 0, xRangeMax = 0;
+//	int yRangeMin = 0, yRangeMax = 0;
+//	switch (quadrant)
+//	{
+//	case(1):
+//		rand = &rand1;
+//		xRangeMin = (SCREEN_WIDTH / 2);
+//		xRangeMax = SCREEN_WIDTH;
+//
+//		yRangeMin = (SCREEN_HEIGHT / 2);
+//		yRangeMax = SCREEN_HEIGHT;
+//		waitFlag = &finished1;
+//		break;
+//	case(2):
+//		rand = &rand2;
+//		xRangeMin = 0;
+//		xRangeMax = (SCREEN_WIDTH / 2);
+//
+//		yRangeMin = (SCREEN_HEIGHT / 2);
+//		yRangeMax = SCREEN_HEIGHT;
+//		waitFlag = &finished2;
+//		break;
+//	case(3):
+//		rand = &rand3;
+//		xRangeMin = 0;
+//		xRangeMax = (SCREEN_WIDTH / 2);
+//
+//		yRangeMin = 0;
+//		yRangeMax = (SCREEN_HEIGHT / 2);
+//		waitFlag = &finished3;
+//		break;
+//	case(4):
+//		rand = &rand4;
+//		xRangeMin = (SCREEN_WIDTH / 2);
+//		xRangeMax = SCREEN_WIDTH;
+//
+//		yRangeMin = 0;
+//		yRangeMax = (SCREEN_HEIGHT / 2);
+//		waitFlag = &finished4;
+//		break;
+//	default:
+//		return;
+//	}
+//	
+//
+//	while (!suspendAllThreads) {
+//		if (*waitFlag == false) {
+//			for (size_t i = 0; i < raytraceSamples; i++)
+//			{
+//				int randX = lroundf(xRangeMin + ((float)(*rand)() / INT_MAX) * (xRangeMax - xRangeMin - 1));
+//				int randY = lroundf(yRangeMin + ((float)(*rand)() / INT_MAX) * (yRangeMax - yRangeMin - 1));
+//				float3 rayDirection = GetRayDirection(*camera, randX, randY);
+//				auto color = Object::RaytraceScene((*camera).position, rayDirection);
+//				set_pixel(randX, randY, color, renderTexture);
+//			}
+//			*waitFlag = true;
+//		}
+//		else {
+//			Sleep(1);
+//		}
+//	}
+//};
+
+
+void renderArea(
+	unsigned int minX, unsigned int maxX, 
+	unsigned int minY, unsigned int maxY, 
+	bool* waitFlag, 
+	const std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>& randn, 
+	unsigned int raytraceSamples, const Transform* camera, const SDL_Surface* renderTexture) {
 
 	//min inclusive
 	//max exclusive
-	int xRangeMin = 0, xRangeMax = 0;
-	int yRangeMin = 0, yRangeMax = 0;
-	switch (quadrant)
-	{
-	case(1):
-		xRangeMin = (SCREEN_WIDTH / 2);
-		xRangeMax = SCREEN_WIDTH;
-
-		yRangeMin = (SCREEN_HEIGHT / 2);
-		yRangeMax = SCREEN_HEIGHT;
-		break;
-	case(2):
-		xRangeMin = 0;
-		xRangeMax = (SCREEN_WIDTH / 2);
-
-		yRangeMin = (SCREEN_HEIGHT / 2);
-		yRangeMax = SCREEN_HEIGHT;
-		break;
-	case(3):
-		xRangeMin = 0;
-		xRangeMax = (SCREEN_WIDTH / 2);
-
-		yRangeMin = 0;
-		yRangeMax = (SCREEN_HEIGHT / 2);
-		break;
-	case(4):
-		xRangeMin = (SCREEN_WIDTH / 2);
-		xRangeMax = SCREEN_WIDTH;
-
-		yRangeMin = 0;
-		yRangeMax = (SCREEN_HEIGHT / 2);
-		break;
-	default:
-		return;
-	}
-	
-	
-	SDL_Surface* renderTarget = MAINSCREEN;
-	void* pixels = renderTarget->pixels;
-	int pitch = renderTarget->pitch;
-	Uint8 bytesPerPixel = renderTarget->format->BytesPerPixel;
-
-	for (size_t i = 0; i < raytraceSamples; i++)
-	{
-		int randX = rand() % (xRangeMax - 1) + xRangeMin;
-		int randY = rand() % (yRangeMax - 1) + yRangeMin;
-		float3 rayDirection = GetRayDirection(*camera, randX, randY);
-		auto color = Object::RaytraceScene((*camera).position, rayDirection);
-		Uint32* targetPixel = (Uint32*)((Uint8*)pixels + (SCREEN_HEIGHT - 1 - randY) * pitch + randX * bytesPerPixel);
-		*targetPixel = color;
+	//auto rand = randn;
+	while (!suspendAllThreads) {
+		if (*waitFlag == false) {
+			for (size_t i = 0; i < raytraceSamples; i++)
+			{
+				int randX = lroundf(minX + ((float)(randn)() / INT_MAX) * (maxX - minX - 1));
+				int randY = lroundf(minY + ((float)(randn)() / INT_MAX) * (maxY - minY - 1));
+				float3 rayDirection = GetRayDirection(*camera, randX, randY);
+				auto color = Object::RaytraceScene((*camera).position, rayDirection);
+				set_pixel(randX, randY, color, renderTexture);
+			}
+			*waitFlag = true;
+		}
+		else {
+			Sleep(1);
+		}
 	}
 };
 
@@ -487,11 +551,12 @@ int main()
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_Window* window = SDL_CreateWindow("Raytracer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_VULKAN);
 	SDL_Surface* screen = SDL_GetWindowSurface(window);
-	MAINSCREEN = screen;
+
+
 	SDL_FillRect(screen, 0, Color(0, 0, 0, 0));
 	auto cursor = SDL_GetDefaultCursor();
 	SDL_SetCursor(cursor);
-	float frametime = 0;
+	long long frametime = 0;
 	float fps = 0;
 	SDL_SetRelativeMouseMode(SDL_TRUE);
 
@@ -505,13 +570,13 @@ int main()
 	float3 position;
 	float renderDistance;
 
-	float time = 0;
+
 	float delta = 0;
 
-	const int raytraceSamples = 4096 * 3;
+	const unsigned int raytraceSamples = 4096 * 8;
 	int mouseX = 0;
 	int mouseY = 0;
-	float mouseSpeed = 0.0005;
+	float mouseSpeed = 0.1;
 
 	Object* d;
 	int s = 8;
@@ -529,10 +594,46 @@ int main()
 	d->color = Color(.5f, .5f, .5f);
 	printf("Finished creating objects");
 
+	int ss = raytraceSamples * 0.25f;
 
+#ifdef MULTITHREAD
+
+	auto renderWorkers = new std::thread*[THREADS];
+	auto waitWorkerFlags = new bool[THREADS];
+	auto rrr = new std::mt19937*[THREADS];
+	auto randFunctions = new std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>*[THREADS];
+	int div = SCREEN_WIDTH / THREADS;
+
+	for (size_t i = 0; i < THREADS; i++)
+	{
+		waitWorkerFlags[i] = false;
+		rrr[i] = new std::mt19937();
+		auto d = std::bind(*dice_distribution, *(rrr[i]));
+		randFunctions[i] = new std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>(d);
+		int initialX = div * i;
+		renderArea(initialX, initialX + div, 0, SCREEN_HEIGHT, &waitWorkerFlags[i], *(randFunctions[i]), raytraceSamples, &camera, screen);
+
+		//renderWorkers[i] = new std::thread(renderArea, initialX, initialX + div, 0, SCREEN_HEIGHT, &waitWorkerFlags[i], randFunctions[i], raytraceSamples, &camera, screen);
+	}
+
+	//std::thread* q1;
+	//std::thread* q2;
+	//std::thread* q3;
+	//std::thread* q4;
+	//q1 = new std::thread(renderQuadrant, 1, raytraceSamples, &camera, screen);
+	//q2 = new std::thread(renderQuadrant, 2, raytraceSamples, &camera, screen);
+	//q3 = new std::thread(renderQuadrant, 3, raytraceSamples, &camera, screen);
+	//q4 = new std::thread(renderQuadrant, 4, raytraceSamples, &camera, screen);
+
+#endif // MULTITHREAD
+	std::chrono::steady_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 	bool pause = false;
 	while (true) {
-		auto t1 = std::chrono::high_resolution_clock::now();
+
+
+#ifndef MULTITHREAD
+		t1 = std::chrono::high_resolution_clock::now();
+#endif
 
 		SDL_PumpEvents();
 		const Uint8* state = SDL_GetKeyboardState(NULL);
@@ -544,85 +645,132 @@ int main()
 		if (!pause) {
 
 			SDL_GetRelativeMouseState(&mouseX, &mouseY);
-			camera.RotateAboutAxis(mouseX * mouseSpeed, WORLDUP);
-			camera.RotateAboutAxis(mouseY * mouseSpeed, camera.right);
+			camera.RotateAboutAxis(mouseX * mouseSpeed * delta, WORLDUP);
+			camera.RotateAboutAxis(mouseY * mouseSpeed * delta, camera.right);
 
-			float speed = .5;
+			float speed = delta;
 			if (state[SDL_SCANCODE_LSHIFT]) {
-				speed = 1;
+				speed = 2 * delta;
 			}
 			if (state[SDL_SCANCODE_W]) {
-				camera.position = camera.position + camera.forward * delta * speed;
+				camera.position = camera.position + camera.forward * speed;
 			}
 			if (state[SDL_SCANCODE_D]) {
-				camera.position = camera.position + camera.right * delta * speed;
+				camera.position = camera.position + camera.right * speed;
 			}
 			if (state[SDL_SCANCODE_A]) {
-				camera.position = camera.position - camera.right * delta * speed;
+				camera.position = camera.position - camera.right * speed;
 			}
 			if (state[SDL_SCANCODE_S]) {
-				camera.position = camera.position - camera.forward * delta * speed;
+				camera.position = camera.position - camera.forward * speed;
 			}
 			if (state[SDL_SCANCODE_E]) {
-				camera.position = camera.position + camera.up * delta * speed;
+				camera.position = camera.position + camera.up * speed;
 			}
 			if (state[SDL_SCANCODE_Q]) {
-				camera.position = camera.position - camera.up * delta * speed;
+				camera.position = camera.position - camera.up * speed;
 			}
 
+#ifdef  MULTITHREAD
 
-			//for (size_t i = 0; i < SCREEN_WIDTH; i++)
-			//{
-			//	for (size_t j = 0; j < SCREEN_HEIGHT; j++)
-			//	{
-			//		int randX = i;
-			//		int randY = j;
-			//		float3 rayDirection = GetRayDirection(camera, randX, randY);
-			//		auto color = Object::RaytraceScene(camera.position, rayDirection);
-			//		set_pixel(randX, randY, color);
-			//	}
+			bool falseCheck = false;
+			for (size_t i = 0; i < THREADS; i++)
+			{
+				if (waitWorkerFlags[i] == false) {
+					falseCheck = true;
+					break;
+				}
+			}
+
+			if (!falseCheck) {
+				SDL_UpdateWindowSurface(window);
+				auto t2 = std::chrono::high_resolution_clock::now();
+				frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+				delta = frametime / 1000.0f;
+				fps = 1000.0f / frametime;
+				cout << "frametime: " << frametime << "\n";
+				cout << "delta: " << delta << "\n";
+				cout << "fps: " << fps << "\n";;
+				t1 = std::chrono::high_resolution_clock::now();
+
+
+				for (size_t i = 0; i < THREADS; i++)
+				{
+					waitWorkerFlags[i] = false;
+				}
+			}
+
+			//if (finished1 && finished2 && finished3 && finished4) {
+			//	SDL_UpdateWindowSurface(window);
+			//	auto t2 = std::chrono::high_resolution_clock::now();
+			//	frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+			//	delta = frametime / 1000.0f;
+			//	fps = 1000.0f / frametime;
+			//	cout << "frametime: " << frametime << "\n";
+			//	cout << "delta: " << delta << "\n";
+			//	cout << "fps: " << fps << "\n";;
+			//	t1 = std::chrono::high_resolution_clock::now();
+			//	finished1 = false;
+			//	finished2 = false;
+			//	finished3 = false;
+			//	finished4 = false;
 			//}
-			//pause = true;
-
-			//create 4 threads
-			//each thread will work on different quadrants of the screen
-			std::thread q1(renderQuadrant, 1, raytraceSamples, &camera);
-			//std::thread q2(renderQuadrant, 2, raytraceSamples, &camera);
-			//std::thread q3(renderQuadrant, 3, raytraceSamples, &camera);
-			//std::thread q4(renderQuadrant, 4, raytraceSamples, &camera);
-
-			q1.join();
-			//q2.join();
-			//q3.join();
-			//q4.join();
-
-			//for (size_t i = 0; i < raytraceSamples; i++)
-			//{
-			//	int randX = rand() % SCREEN_WIDTH;
-			//	int randY = rand() % SCREEN_HEIGHT;
-			//	float3 rayDirection = GetRayDirection(camera, randX, randY);
-			//	auto color = Object::RaytraceScene(camera.position, rayDirection);			
-			//	//set_pixel(randX, randY, color, MAINSCREEN);
-			//
-			//	Uint32* targetPixel = (Uint32*)((Uint8*)MAINSCREEN->pixels + (SCREEN_HEIGHT - 1 - randY) * MAINSCREEN->pitch + randX * MAINSCREEN->format->BytesPerPixel);
-			//	*targetPixel = color;
+			//else {
+			//	delta = 0;
 			//}
 
+#else
+			for (size_t i = 0; i < raytraceSamples; i++)
+			{
+				int randX = rand() % SCREEN_WIDTH;
+				int randY = rand() % SCREEN_HEIGHT;
+				float3 rayDirection = GetRayDirection(camera, randX, randY);
+				auto color = Object::RaytraceScene(camera.position, rayDirection);
+				//set_pixel(randX, randY, color, MAINSCREEN);
+
+				Uint32* targetPixel = (Uint32*)((Uint8*)screen->pixels + (SCREEN_HEIGHT - 1 - randY) * screen->pitch + randX * screen->format->BytesPerPixel);
+				*targetPixel = color;
+			}
 			SDL_UpdateWindowSurface(window);
+
+			auto t2 = std::chrono::high_resolution_clock::now();
+			frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+			delta = frametime / 1000.0f;
+			fps = 1000.0f / frametime;
+			cout << "frametime: " << frametime << "\n";
+			cout << "delta: " << delta << "\n";
+			cout << "fps: " << fps << "\n";;
+#endif //  MULTITHREAD
 		}
-
-		auto t2 = std::chrono::high_resolution_clock::now();
-		frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-		delta = frametime / 1000.0f;
-		time += delta;
-		printf("Time(s): %.2f\n", time);
-
-		fps = (frametime > 0) ? 1000.0f / frametime : 10000;
-		printf("frametime(ms): %.0f\n", frametime);
-		printf("fps: %.3f\n", fps);
-
 	}
 
+
+#ifdef MULTITHREAD
+	suspendAllThreads = true;
+
+	for (size_t i = 0; i < THREADS; i++)
+	{
+		renderWorkers[i]->join();
+		delete renderWorkers[i];
+
+		delete randFunctions[i];
+
+		delete rrr[i];
+	}
+	delete[] renderWorkers;
+	delete[] waitWorkerFlags;
+	delete[] randFunctions;
+	delete[] rrr;
+
+	//q1->join();
+	//q2->join();
+	//q3->join();
+	//q4->join();
+	//delete q1;
+	//delete q2;
+	//delete q3;
+	//delete q4;
+#endif
 
 
 	SDL_DestroyWindow(window);
