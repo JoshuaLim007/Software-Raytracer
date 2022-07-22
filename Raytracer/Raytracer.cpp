@@ -20,7 +20,7 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
-const int THREADS = 4;
+const int THREADS = 128;
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
@@ -514,28 +514,41 @@ bool suspendAllThreads = false;
 //	}
 //};
 
-
+auto renderWorkers = new std::thread * [THREADS];
+auto waitWorkerFlags = new bool[THREADS];
+auto randFunctions = new std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>*[THREADS];
 void renderArea(
+	unsigned int index,
 	unsigned int minX, unsigned int maxX, 
 	unsigned int minY, unsigned int maxY, 
-	bool* waitFlag, 
-	const std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>& randn, 
 	unsigned int raytraceSamples, const Transform* camera, const SDL_Surface* renderTexture) {
 
 	//min inclusive
 	//max exclusive
 	//auto rand = randn;
 	while (!suspendAllThreads) {
-		if (*waitFlag == false) {
-			for (size_t i = 0; i < raytraceSamples; i++)
+		if (waitWorkerFlags[index] == false) {
+			//for (size_t i = 0; i < raytraceSamples; i++)
+			//{
+			//	int randX = floor(minX + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxX - minX));
+			//	int randY = floor(minY + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxY - minY));
+			//	float3 rayDirection = GetRayDirection(*camera, randX, randY);
+			//	auto color = Object::RaytraceScene((*camera).position, rayDirection);
+			//	set_pixel(randX, randY, color, renderTexture);
+			//}
+
+			for (size_t i = minX; i < maxX; i++)
 			{
-				int randX = lroundf(minX + ((float)(randn)() / INT_MAX) * (maxX - minX - 1));
-				int randY = lroundf(minY + ((float)(randn)() / INT_MAX) * (maxY - minY - 1));
-				float3 rayDirection = GetRayDirection(*camera, randX, randY);
-				auto color = Object::RaytraceScene((*camera).position, rayDirection);
-				set_pixel(randX, randY, color, renderTexture);
+				for (size_t j = minY; j < maxY; j++)
+				{
+					float3 rayDirection = GetRayDirection(*camera, i, j);
+					auto color = Object::RaytraceScene((*camera).position, rayDirection);
+					set_pixel(i, j, color, renderTexture);
+				}
 			}
-			*waitFlag = true;
+
+
+			waitWorkerFlags[index] = true;
 		}
 		else {
 			Sleep(1);
@@ -573,7 +586,7 @@ int main()
 
 	float delta = 0;
 
-	const unsigned int raytraceSamples = 4096 * 8;
+	const unsigned int raytraceSamples = 4096 * 12;
 	int mouseX = 0;
 	int mouseY = 0;
 	float mouseSpeed = 0.1;
@@ -598,22 +611,18 @@ int main()
 
 #ifdef MULTITHREAD
 
-	auto renderWorkers = new std::thread*[THREADS];
-	auto waitWorkerFlags = new bool[THREADS];
-	auto rrr = new std::mt19937*[THREADS];
-	auto randFunctions = new std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>*[THREADS];
-	int div = SCREEN_WIDTH / THREADS;
 
+	int div = round(SCREEN_WIDTH / (THREADS));
 	for (size_t i = 0; i < THREADS; i++)
 	{
 		waitWorkerFlags[i] = false;
-		rrr[i] = new std::mt19937();
-		auto d = std::bind(*dice_distribution, *(rrr[i]));
+		auto mt1 = std::mt19937();
+		mt1.seed(i);
+		auto d = std::bind(*dice_distribution, mt1);
+
 		randFunctions[i] = new std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>(d);
 		int initialX = div * i;
-		renderArea(initialX, initialX + div, 0, SCREEN_HEIGHT, &waitWorkerFlags[i], *(randFunctions[i]), raytraceSamples, &camera, screen);
-
-		//renderWorkers[i] = new std::thread(renderArea, initialX, initialX + div, 0, SCREEN_HEIGHT, &waitWorkerFlags[i], randFunctions[i], raytraceSamples, &camera, screen);
+		renderWorkers[i] = new std::thread(renderArea, i, initialX, initialX + div, 0, SCREEN_HEIGHT, raytraceSamples / THREADS, &camera, screen);
 	}
 
 	//std::thread* q1;
@@ -699,6 +708,9 @@ int main()
 					waitWorkerFlags[i] = false;
 				}
 			}
+			else {
+				delta = 0;
+			}
 
 			//if (finished1 && finished2 && finished3 && finished4) {
 			//	SDL_UpdateWindowSurface(window);
@@ -754,13 +766,10 @@ int main()
 		delete renderWorkers[i];
 
 		delete randFunctions[i];
-
-		delete rrr[i];
 	}
 	delete[] renderWorkers;
 	delete[] waitWorkerFlags;
 	delete[] randFunctions;
-	delete[] rrr;
 
 	//q1->join();
 	//q2->join();
