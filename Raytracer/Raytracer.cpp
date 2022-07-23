@@ -27,8 +27,55 @@ const int THREADS = 128;
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
 
+float flerpf(float a, float b, float t) {
+	return a * (1 - t) + b * t;
+}
+
 struct float3 {
 	float x, y, z;
+	
+	inline float operator[](const int& idx) const {
+		switch (idx) {
+			case(0):
+				return x;
+			case(1):
+				return y;
+			case(2):
+				return z;
+		}
+	}
+	inline float operator+(const int& idx) const {
+		switch (idx) {
+			case(0):
+				return x;
+			case(1):
+				return y;
+			case(2):
+				return z;
+		}
+	}
+	inline float operator()(const int& idx) const {
+		switch (idx) {
+			case(0):
+				return x;
+			case(1):
+				return y;
+			case(2):
+				return z;
+		}
+	}
+	
+	inline float3 xz() {
+		return float3(x, 0, z);
+	}
+	inline float3 xy() {
+		return float3(x, y, 0);
+	}
+	inline float3 yz() {
+		return float3(0, y, z);
+	}
+	
+	
 	float3(float x, float y, float z) {
 		this->x = x;
 		this->y = y;
@@ -40,12 +87,24 @@ struct float3 {
 	float MagnitudeSqrd() const {
 		return (x * x + y * y + z * z);
 	}
-	static float Dot(const float3& lhs, const float3& rhs) {
-		return (lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z);
+	static float Dot(const float3& lhs, const float3& rhs, bool noNeg = false) {
+		
+		auto d = (lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z);
+		if (noNeg) {
+			return d < 0 ? 0 : d;
+		}
+		else {
+			return d;
+		}
+
 	}
 	static float3 Cross(const float3& lhs, const float3& rhs) {
 		return float3(lhs.y * rhs.z - rhs.y * lhs.z, rhs.x * lhs.z - lhs.x * rhs.z, lhs.x * rhs.y - rhs.x * lhs.y);
 	}
+	static float3 Lerp(const float3& a, const float3& b, float t){
+		return float3(flerpf(a(0), b(0), t), flerpf(a(1), b(1), t), flerpf(a(2), b(2), t));
+	}
+
 	float3() {
 		x = 0;
 		y = 0;
@@ -63,6 +122,29 @@ struct float3 {
 	float3 operator/(const float& rhs) const {
 		return float3(x / rhs, y / rhs, z / rhs);
 	}
+
+	float3& operator-=(const float3& rhs) {
+		*this = (*this) - rhs;
+		return *this;
+	}
+	float3& operator+=(const float3& rhs) {
+		*this = (*this) + rhs;
+		return *this;
+	}
+	float3& operator*=(const float& rhs) {
+		*this = (*this) * rhs;
+		return *this;
+	}
+	float3& operator/=(const float& rhs) {
+		*this = (*this) / rhs;
+		return *this;
+	}
+
+	float3 operator*(const float3& o) {
+		return float3(x * o(0), y * o(1), z * o(2));
+	}
+
+
 	float3 Normalized() {
 		float length = Magnitude();
 		return float3(x / length, y / length, z / length);
@@ -74,10 +156,10 @@ struct float3 {
 struct Color {
 	//1 = 255
 	//0 = 0
-	float r;
-	float g;
-	float b;
-	float a;
+	float r = 0;
+	float g = 0;
+	float b = 0;
+	float a = 0;
 
 private:
 	Uint32 fromRGBA() const {
@@ -103,6 +185,41 @@ public:
 	Color operator *(const float& rhs) const {
 		return Color(r * rhs, g * rhs, b * rhs, a * rhs);
 	}
+	Color operator *(const Color& rhs) const {
+		return Color(r * rhs.r, g * rhs.g, b * rhs.b, a * rhs.a);
+	}
+	Color operator + (const Color& o) const {
+		return Color(r + o.r, g + o.g, b + o.b, a + o.a);
+	}
+	Color operator / (const float& o) const {
+		return Color(r / o, g / o, b / o, a / o);
+	}
+	Color operator - (const Color& o) const {
+		return Color(r - o.r, g - o.g, b - o.b, a - o.a);
+	}
+	
+	Color& operator += (const Color& o) {
+
+		*this = *this + o;
+
+		return *this;
+	}
+	Color& operator *=(const float& o) {
+		*this = *this * o;
+
+		return *this;
+	}
+	Color& operator -=(const Color& o) {
+		*this = *this - o;
+
+		return *this;
+	}
+	Color& operator /=(const float& o) {
+		*this = *this / o;
+
+		return *this;
+	}
+
 	Color(float r, float g, float b, float a = 0) {
 		if (r < 0) r = 0;
 		if (g < 0) g = 0;
@@ -123,10 +240,6 @@ public:
 
 	}
 	Color() {
-		r = 1;
-		g = 1;
-		b = 1;
-		a = 1;
 	}
 
 	static Color Lerp(const Color& a, const Color& b, float time) {
@@ -155,10 +268,10 @@ struct Rayhit {
 	float distance;
 };
 
-float3 SunDirection = float3(0, 1, .5);
-Color SkyColor = Color(.5, 1, 2);
+float3 SunDirection = float3(0, -1, .5);
+Color SkyColor = Color(1, 1.3, 1.4f);
 Color GroundColor = Color(.05f, .06f, .1f);
-Color SunColor = Color(1.0f, 1.0f, 1.0f);
+Color SunColor = Color(1, 1, 1);
 
 
 void set_pixel(const int& x, const int& y, const Color& color, const SDL_Surface* surface) {
@@ -206,11 +319,12 @@ private:
 		//return rayDir - normal * (2 * (float3::Dot(rayDir, normal)));
 
 		float3 sr;
-		sr.x = ((float)rand() / RAND_MAX - 0.5f) * 2;
-		sr.y = ((float)rand() / RAND_MAX - 0.5f) * 2;
-		sr.y = sr.y < 0 ? 0 : sr.y;
-		sr.z = ((float)rand() / RAND_MAX - 0.5f) * 2;
-		sr = sr.Normalized();
+		do {
+			sr.x = ((float)rand() / RAND_MAX - 0.5f) * 2;
+			sr.y = ((float)rand() / RAND_MAX - 0.5f) * 2;
+			sr.z = ((float)rand() / RAND_MAX - 0.5f) * 2;
+			sr = sr.Normalized();
+		} while (float3::Dot(sr, normal) < 0);
 
 		//sr creates a random unit vector in a hemisphere oriented up
 
@@ -265,53 +379,109 @@ public:
 		//multiply with objects base color
 		auto hit = GetClosestObject(rayOrigin, rayDirection);
 		if (hit.valid) {
+			
+			float roughness = .8;
+			float metalness = 0;
 
-			Color diffusedColor;
+			Color diffusedColor = Color(0, 0, 0);
+			Color specularColor;
 			Color reflectionColor;
 
+			Color emmission = Color(0, 0, 0);
+
+			//#define RAYTRACEDIFFUSE
+
+#ifdef RAYTRACEDIFFUSE
 			for (size_t i = 0; i < SamplesPerRay; i++)
 			{
 				auto sray = RandomNormalOrientedHemisphere(hit.normal, rayDirection);
 				auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
-				if (shit.valid) {
-					diffusedColor = Color(0, 0, 0);
-				}
-				else {
-					diffusedColor = get_environment_color(sray);
+				if (!shit.valid) {
+					diffusedColor += get_environment_color(sray);
 				}
 			}
-
-			diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
+			diffusedColor /= (float)SamplesPerRay;
 			diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
+#else
 
+			diffusedColor = (hit.color / (float)std::_Pi);
+#endif
 
+			float3 lightVector = float3(0, 1, 0).Normalized();
+			Color lightColor = SunColor;
+			float3 viewDirection = rayDirection * -1;
+			float3 halfVector = (viewDirection + lightVector).Normalized();
+			
+			//PBR Reflectance model copied from https://www.youtube.com/watch?v=RRE-F57fbXw&t=425s&ab_channel=VictorGordan
+
+			auto D = [](float roughness, const float3& halfVector, const float3& normal) {
+				//GGX/Trowbridge-Reitz
+				float3 h = halfVector;
+				float a = roughness * roughness;
+				float asqd = a * a;
+				float NdotH = float3::Dot(normal, h, true);
+				float denom = (float)3.1415f * powf((NdotH * NdotH) * (asqd - 1) + 1, 2);
+				denom = denom == 0 ? FLT_EPSILON : denom;
+				return asqd / denom;
+			};
+			auto G = [](float roughness, const float3& normal, const float3& xDirection) {
+				//Schlick-Beckmann model
+				float a = roughness * roughness;
+				float k = a / 2;
+				float denom = (float3::Dot(normal, xDirection, true) * (1 - k) + k);
+				denom = denom == 0 ? FLT_EPSILON : denom;
+				auto f = float3::Dot(normal, xDirection, true) / denom;
+				return f;
+			};
+			auto F = [](const float3& baseReflectivity, const float3& viewDirection, const float3& H) {
+				//Schlicks fresnal approximation
+				float VdotH = float3::Dot(viewDirection, H, true);
+				return (baseReflectivity + ((float3(1,1,1) - baseReflectivity) * powf(1 - VdotH, 5)));
+			};
+
+			float3 baseReflectance = float3(.05f,.05f,.05f); //magic constant
+
+			auto sray = RandomNormalOrientedHemisphere(hit.normal, rayDirection);
 			auto reflectionRay = rayDirection.Reflect(hit.normal);
+			reflectionRay = float3::Lerp(reflectionRay, sray, roughness * roughness).Normalized();
+
 			auto reflectionObject = GetClosestObject(hit.point + hit.normal * 0.05f, reflectionRay);
 			if (reflectionObject.valid) {
-				reflectionColor = Color(0,0,0);
+				reflectionColor = Color(0, 0, 0);
 			}
 			else {
 				reflectionColor = get_environment_color(reflectionRay);
 			}
 
+			//cook torrence specular lighting
+			roughness *= roughness;
+			float cookTorrenceNumerator = D(roughness, halfVector, hit.normal) * G(roughness, hit.normal, viewDirection) * G(roughness, hit.normal, lightVector);
+			float cookTorrenceDenominator = (float3::Dot(viewDirection, hit.normal, true) * float3::Dot(lightVector, hit.normal, true) * 4.0f);
+			cookTorrenceDenominator = cookTorrenceDenominator == 0 ? .000001f : cookTorrenceDenominator;
+			float specularLighing = cookTorrenceNumerator / cookTorrenceDenominator;
 
-			return reflectionColor;
+			auto lightDot = float3::Dot(lightVector, hit.normal, true);
+
+			specularColor = reflectionColor * metalness + lightColor * (specularLighing * lightDot);
+
+
+			float3 ks = float3::Lerp(F(baseReflectance, viewDirection, halfVector), float3(1,1,1), metalness);
+			float3 kd = (float3(1, 1, 1) - ks);
+
+
+			Color diffuseSpecular = (diffusedColor * Color(kd.x, kd.y, kd.z)) * ((SunColor * lightDot) + reflectionColor) + (specularColor * Color(ks.x, ks.y, ks.z));
+			Color outgoing = emmission + diffuseSpecular;
+			return outgoing;
 		}
 
 		return get_environment_color(rayDirection);
 	}
 
-
-	/// <summary>
-	/// 1 = glossy, 0 = rough
-	/// </summary>
-	float roughness = 0;
 	Transform transform;
 	/// <summary>
 	/// Base color
 	/// </summary>
 	Color color;
-
 
 	Object() {
 		allObjects.push_back(this);
@@ -324,7 +494,7 @@ public:
 
 float3 Object::UP = float3(0, 1, 0);
 int Object::MaxRaytraceBounces = 1;
-int Object::SamplesPerRay = 1;
+int Object::SamplesPerRay = 4;
 char Object::RaytraceRenderMode = 0;
 std::vector<Object*> Object::allObjects = std::vector<Object*>();
 
@@ -528,24 +698,25 @@ void renderArea(
 	//auto rand = randn;
 	while (!suspendAllThreads) {
 		if (waitWorkerFlags[index] == false) {
-			//for (size_t i = 0; i < raytraceSamples; i++)
-			//{
-			//	int randX = floor(minX + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxX - minX));
-			//	int randY = floor(minY + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxY - minY));
-			//	float3 rayDirection = GetRayDirection(*camera, randX, randY);
-			//	auto color = Object::RaytraceScene((*camera).position, rayDirection);
-			//	set_pixel(randX, randY, color, renderTexture);
-			//}
 
-			for (size_t i = minX; i < maxX; i++)
+			for (size_t i = 0; i < raytraceSamples; i++)
 			{
-				for (size_t j = minY; j < maxY; j++)
-				{
-					float3 rayDirection = GetRayDirection(*camera, i, j);
-					auto color = Object::RaytraceScene((*camera).position, rayDirection);
-					set_pixel(i, j, color, renderTexture);
-				}
+				int randX = floor(minX + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxX - minX ));
+				int randY = floor(minY + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxY - minY ));
+				float3 rayDirection = GetRayDirection(*camera, randX, randY);
+				auto color = Object::RaytraceScene((*camera).position, rayDirection);
+				set_pixel(randX, randY, color, renderTexture);
 			}
+
+			//for (size_t i = minX; i < maxX; i++)
+			//{
+			//	for (size_t j = minY; j < maxY; j++)
+			//	{
+			//		float3 rayDirection = GetRayDirection(*camera, i, j);
+			//		auto color = Object::RaytraceScene((*camera).position, rayDirection);
+			//		set_pixel(i, j, color, renderTexture);
+			//	}
+			//}
 
 
 			waitWorkerFlags[index] = true;
@@ -589,7 +760,7 @@ int main()
 	const unsigned int raytraceSamples = 4096 * 12;
 	int mouseX = 0;
 	int mouseY = 0;
-	float mouseSpeed = 0.1;
+	float mouseSpeed = 1;
 
 	Object* d;
 	int s = 8;
@@ -600,11 +771,11 @@ int main()
 		for (int j = 0; j < s; j++)
 		{
 			d = new Sphere(0.2, float3((i - half) * 0.6, -1, (j + zOffset) * 0.3));
-			d->color = Color(0.5f, 0.5f, 0.5f);
+			d->color = Color(1, 1, 1);
 		}
 	}
 	d = new Sphere(1, float3(0, 0, 5));
-	d->color = Color(.5f, .5f, .5f);
+	d->color = Color(1, 1, 1);
 	printf("Finished creating objects");
 
 	int ss = raytraceSamples * 0.25f;
