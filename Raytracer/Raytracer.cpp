@@ -12,6 +12,7 @@
 
 #undef main
 
+#define NOISYRENDER
 #define MULTITHREAD
 
 using std::cout; using std::endl;
@@ -20,12 +21,12 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
-const int THREADS = 128;
+const int THREADS = 32;
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 1920
+#define SCREEN_HEIGHT 1080
 
 struct float3 {
 	float x, y, z;
@@ -100,6 +101,9 @@ private:
 	}
 public:
 	operator Uint32() const { return fromRGBA(); }
+	Color operator + (const Color& o) const {
+		return Color(r + o.r, g + o.g, b + o.b, a + o.a);
+	}
 	Color operator *(const float& rhs) const {
 		return Color(r * rhs, g * rhs, b * rhs, a * rhs);
 	}
@@ -153,15 +157,20 @@ struct Rayhit {
 	float3 normal;
 	float3 point;
 	float distance;
+	void* object;
 };
 
-float3 SunDirection = float3(0, 1, .5);
-Color SkyColor = Color(.5, 1, 2);
-Color GroundColor = Color(.05f, .06f, .1f);
-Color SunColor = Color(1.0f, 1.0f, 1.0f);
+float3 SunDirection = float3(.5, 1, .5);
+Color SkyColor = Color(1, 1.2, 1.5);
+Color GroundColor = Color(0, 0, 0);
+Color SunColor = Color(6, 6, 6);
 
 
 void set_pixel(const int& x, const int& y, const Color& color, const SDL_Surface* surface) {
+
+	if (x >= SCREEN_WIDTH || y >= SCREEN_HEIGHT || x < 0 || y < 0) {
+		return;
+	}
 
 	Uint32* targetPixel = (Uint32*)((Uint8*)surface->pixels + (SCREEN_HEIGHT - 1 - y) * surface->pitch + x * surface->format->BytesPerPixel);
 
@@ -195,33 +204,87 @@ private:
 				if (hitResults.distance < shortestDistance) {
 					shortestDistance = hitResults.distance;
 					returnResults = hitResults;
+					returnResults.object = allObjects[i];
 				}
 			}
 		}
 		return returnResults;
 	}
 	static float3 UP;
-	static float3 RandomNormalOrientedHemisphere(const float3& normal, const float3& rayDir) {
+
+	static float3  GetNormalOrientedBakedVector(int index, const float3& normal, const float3& rayDir) {
+		float3 reflected = rayDir.Reflect(normal);
+		
+		//float dot = float3::Dot(reflected, normal);
+		//dot = dot < 0 ? 0 : dot;
+
+		float3 side1 = float3::Cross(reflected, rayDir);
+		float3 side2 = side1 * -1;
+		float3 forward = float3::Cross(side1, normal);
+		float3 backward = forward * -1;
+
+		side1 = side1 * 0.5f + normal * 0.5f;
+		side2 = side2 * 0.5f + normal * 0.5f;
+		forward = forward * 0.5f + normal * 0.5f;
+		backward = backward * 0.5f + normal * 0.5f;
+
+		float3 halfSide1 = side1 * 0.5f + forward * 0.5f;
+		float3 halfSide12 = side1 * 0.5f + backward * 0.5f;
+		float3 halfSide2 = side2 * 0.5f + forward * 0.5f;
+		float3 halfSide22 = side2 * 0.5f + backward * 0.5f;
+
+		switch (index)
+		{
+		case(0):
+			return side1.Normalized();
+		case(1):
+			return side2.Normalized();
+		case(2):
+			return forward.Normalized();
+		case(3):
+			return backward.Normalized();
+		case(4):
+			return halfSide1.Normalized();
+		case(5):
+			return halfSide12.Normalized();
+		case(6):
+			return halfSide2.Normalized();
+		case(7):
+			return halfSide22.Normalized();
+		case(8):
+			return normal;
+		case(9):
+			return reflected;
+		}
+
+		//float3 side2 = float3::Cross(reflected, normal) * -1;
+
+		//side1 = side1 * (1 - dot) + normal * dot;
+		//side2 = side2 * (1 - dot) + normal * dot;
+
+		//float3 side1Half1 = side1 * 0.5f + reflected * 0.5f;
+		//float3 side1Half2 = side2 * 0.5f + reflected * 0.5f;
+
+		//float3 side1Half3 = side1 * 0.5f + rayDir * -0.5f;
+		//float3 side1Half4 = side2 * 0.5f + rayDir * -0.5f;
+
+	}
+	static float3 RandomNormalOrientedHemisphere(const float3& normal) {
 
 		//return rayDir - normal * (2 * (float3::Dot(rayDir, normal)));
-
+		
 		float3 sr;
-		sr.x = ((float)rand() / RAND_MAX - 0.5f) * 2;
-		sr.y = ((float)rand() / RAND_MAX - 0.5f) * 2;
-		sr.y = sr.y < 0 ? 0 : sr.y;
-		sr.z = ((float)rand() / RAND_MAX - 0.5f) * 2;
-		sr = sr.Normalized();
+		do {
+			sr.x = ((float)rand() / RAND_MAX - 0.5f) * 2;
+			sr.y = ((float)rand() / RAND_MAX - 0.5f) * 2;
+			sr.z = ((float)rand() / RAND_MAX - 0.5f) * 2;
+			sr = sr.Normalized();
+		} while (float3::Dot(normal, sr) < 0);
+
 
 		//sr creates a random unit vector in a hemisphere oriented up
 
 		//orient sr towards normal
-
-
-
-
-		//auto rotAxis = float3::Cross(normal, UP);
-		//float dd = (1 - ((float3::Dot(UP, normal) + 1) / 2)) * M_PI;
-		//return sr * cosf(dd) + ( rotAxis * (1 - cosf(dd)) * float3::Dot(sr, rotAxis) + (float3::Cross(sr, rotAxis) * sinf(dd)));
 
 		return sr;
 	}
@@ -231,6 +294,9 @@ protected:
 	}
 
 public:
+
+	float smoothness = .5f;
+	float metalness = 0;
 
 	/// <summary>
 	/// Maximum specular reflection bounces.
@@ -263,39 +329,67 @@ public:
 		//scatter ray around at hit point based on hit objects normal <- diffused scattered light ray
 		//if the scattered ray hits an object, it is occluded, if it does not hit, it takes sky light
 		//multiply with objects base color
+
 		auto hit = GetClosestObject(rayOrigin, rayDirection);
 		if (hit.valid) {
 
-			Color diffusedColor;
+			float smoothness = ((Object*)hit.object)->smoothness;
+			float metalness = ((Object*)hit.object)->metalness;
+
+			Color diffusedColor = Color(0,0,0);
 			Color reflectionColor;
+			Color specularColor = Color(0,0,0);
 
 			for (size_t i = 0; i < SamplesPerRay; i++)
 			{
-				auto sray = RandomNormalOrientedHemisphere(hit.normal, rayDirection);
+				//auto sray = RandomNormalOrientedHemisphere(hit.normal);
+				auto sray = RandomNormalOrientedHemisphere(hit.normal);
 				auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
 				if (shit.valid) {
-					diffusedColor = Color(0, 0, 0);
+					//diffusedColor = Color(0, 0, 0);
 				}
 				else {
-					diffusedColor = get_environment_color(sray);
+					auto skyCol = get_environment_color(sray);
+					diffusedColor.r += skyCol.r;
+					diffusedColor.g += skyCol.g;
+					diffusedColor.b += skyCol.b;
+					diffusedColor.a += skyCol.a;
 				}
 			}
+
 
 			diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
 			diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
 
-
+			auto sray = RandomNormalOrientedHemisphere(hit.normal);
 			auto reflectionRay = rayDirection.Reflect(hit.normal);
+			
+			reflectionRay = reflectionRay + (sray * powf((1 - smoothness), 1));
+			reflectionRay = reflectionRay.Normalized();
+
+			//not pbr, but close enough
+
 			auto reflectionObject = GetClosestObject(hit.point + hit.normal * 0.05f, reflectionRay);
 			if (reflectionObject.valid) {
-				reflectionColor = Color(0,0,0);
+				reflectionColor = hit.color * (1 - ((Object*)hit.object)->metalness);
 			}
 			else {
 				reflectionColor = get_environment_color(reflectionRay);
+				float specDot = float3::Dot(reflectionRay, SunDirection);
+				specDot = specDot < 0 ? 0 : specDot;
+				float temp = (specDot - smoothness) * (1 / (1 - smoothness));
+				temp = temp < 0 ? 0 : temp;
+
+				//specular size approximation, custom model
+				specularColor = SunColor * powf(temp, 2) * (smoothness * smoothness * smoothness);
 			}
 
+			//80% of diffused color is present and 20% of reflections are present
+			//as metalness goes up, diffuse approaches 0 and reflections dominate.
+			Color diffuseReflection = (diffusedColor * (0.8f * (1 - metalness)) + (reflectionColor * (0.2f * (1 - metalness) + 1.0f * metalness)));
 
-			return reflectionColor;
+			//add specular reflection
+			return diffuseReflection + specularColor + (Color(diffusedColor.r * SunColor.r, diffusedColor.g * SunColor.g, diffusedColor.b * SunColor.b)) * float3::Dot(SunDirection, hit.normal) * (1 - metalness);
 		}
 
 		return get_environment_color(rayDirection);
@@ -305,7 +399,8 @@ public:
 	/// <summary>
 	/// 1 = glossy, 0 = rough
 	/// </summary>
-	float roughness = 0;
+
+
 	Transform transform;
 	/// <summary>
 	/// Base color
@@ -324,7 +419,7 @@ public:
 
 float3 Object::UP = float3(0, 1, 0);
 int Object::MaxRaytraceBounces = 1;
-int Object::SamplesPerRay = 1;
+int Object::SamplesPerRay = 8;
 char Object::RaytraceRenderMode = 0;
 std::vector<Object*> Object::allObjects = std::vector<Object*>();
 
@@ -528,14 +623,19 @@ void renderArea(
 	//auto rand = randn;
 	while (!suspendAllThreads) {
 		if (waitWorkerFlags[index] == false) {
-			//for (size_t i = 0; i < raytraceSamples; i++)
-			//{
-			//	int randX = floor(minX + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxX - minX));
-			//	int randY = floor(minY + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxY - minY));
-			//	float3 rayDirection = GetRayDirection(*camera, randX, randY);
-			//	auto color = Object::RaytraceScene((*camera).position, rayDirection);
-			//	set_pixel(randX, randY, color, renderTexture);
-			//}
+
+#ifdef NOISYRENDER
+
+			for (size_t i = 0; i < raytraceSamples; i++)
+			{
+				int randX = floor(minX + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxX - minX));
+				int randY = floor(minY + ((double)(*(randFunctions[index]))() / (double)INT_MAX) * (maxY - minY));
+				float3 rayDirection = GetRayDirection(*camera, randX, randY);
+				auto color = Object::RaytraceScene((*camera).position, rayDirection);
+				set_pixel(randX, randY, color, renderTexture);
+			}
+
+#else
 
 			for (size_t i = minX; i < maxX; i++)
 			{
@@ -547,6 +647,7 @@ void renderArea(
 				}
 			}
 
+#endif // NOISYRENDER
 
 			waitWorkerFlags[index] = true;
 		}
@@ -589,7 +690,7 @@ int main()
 	const unsigned int raytraceSamples = 4096 * 12;
 	int mouseX = 0;
 	int mouseY = 0;
-	float mouseSpeed = 0.1;
+	float mouseSpeed = 1;
 
 	Object* d;
 	int s = 8;
@@ -599,12 +700,14 @@ int main()
 	{
 		for (int j = 0; j < s; j++)
 		{
-			d = new Sphere(0.2, float3((i - half) * 0.6, -1, (j + zOffset) * 0.3));
-			d->color = Color(0.5f, 0.5f, 0.5f);
+			d = new Sphere(0.25, float3((i - half) * 0.5 + .25f, (j - half) * 0.5 + .25, 5));
+			d->smoothness = (float)i / (float)s;
+			d->metalness = (float)j / (float)s;
+			d->color = Color(1, 0, 0);
 		}
 	}
-	d = new Sphere(1, float3(0, 0, 5));
-	d->color = Color(.5f, .5f, .5f);
+	//d = new Sphere(1, float3(0, 0, 5));
+	//d->color = Color(1, 0, 0);
 	printf("Finished creating objects");
 
 	int ss = raytraceSamples * 0.25f;
@@ -732,6 +835,8 @@ int main()
 			//}
 
 #else
+#ifdef NOISYRENDER
+
 			for (size_t i = 0; i < raytraceSamples; i++)
 			{
 				int randX = rand() % SCREEN_WIDTH;
@@ -743,6 +848,21 @@ int main()
 				Uint32* targetPixel = (Uint32*)((Uint8*)screen->pixels + (SCREEN_HEIGHT - 1 - randY) * screen->pitch + randX * screen->format->BytesPerPixel);
 				*targetPixel = color;
 			}
+
+#else
+			for (size_t i = 0; i < SCREEN_WIDTH; i++)
+			{
+				for (size_t j = 0; j < SCREEN_HEIGHT; j++)
+				{
+					float3 rayDirection = GetRayDirection(camera, i, j);
+					auto color = Object::RaytraceScene((camera).position, rayDirection);
+					set_pixel(i, j, color, screen);
+				}
+			}
+
+#endif // NOISYRENDER ON
+
+
 			SDL_UpdateWindowSurface(window);
 
 			auto t2 = std::chrono::high_resolution_clock::now();
