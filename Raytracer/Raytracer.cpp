@@ -101,12 +101,20 @@ private:
 	}
 public:
 	operator Uint32() const { return fromRGBA(); }
+	
 	Color operator + (const Color& o) const {
 		return Color(r + o.r, g + o.g, b + o.b, a + o.a);
 	}
 	Color operator *(const float& rhs) const {
 		return Color(r * rhs, g * rhs, b * rhs, a * rhs);
 	}
+
+
+
+
+
+
+
 	Color(float r, float g, float b, float a = 0) {
 		if (r < 0) r = 0;
 		if (g < 0) g = 0;
@@ -340,26 +348,25 @@ public:
 			Color reflectionColor;
 			Color specularColor = Color(0,0,0);
 
-			for (size_t i = 0; i < SamplesPerRay; i++)
-			{
-				//auto sray = RandomNormalOrientedHemisphere(hit.normal);
-				auto sray = RandomNormalOrientedHemisphere(hit.normal);
-				auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
-				if (shit.valid) {
-					//diffusedColor = Color(0, 0, 0);
-				}
-				else {
-					auto skyCol = get_environment_color(sray);
-					diffusedColor.r += skyCol.r;
-					diffusedColor.g += skyCol.g;
-					diffusedColor.b += skyCol.b;
-					diffusedColor.a += skyCol.a;
-				}
-			}
-
-
-			diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
-			diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
+			//for (size_t i = 0; i < SamplesPerRay; i++)
+			//{
+			//	//auto sray = RandomNormalOrientedHemisphere(hit.normal);
+			//	auto sray = RandomNormalOrientedHemisphere(hit.normal);
+			//	auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
+			//	if (shit.valid) {
+			//		//diffusedColor = Color(0, 0, 0);
+			//	}
+			//	else {
+			//		auto skyCol = get_environment_color(sray);
+			//		diffusedColor.r += skyCol.r;
+			//		diffusedColor.g += skyCol.g;
+			//		diffusedColor.b += skyCol.b;
+			//		diffusedColor.a += skyCol.a;
+			//	}
+			
+			//diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
+			//diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
+			diffusedColor = hit.color * float3::Dot(SunDirection, hit.normal);
 
 			auto sray = RandomNormalOrientedHemisphere(hit.normal);
 			auto reflectionRay = rayDirection.Reflect(hit.normal);
