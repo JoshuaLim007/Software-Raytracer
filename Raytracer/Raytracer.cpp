@@ -12,7 +12,7 @@
 
 #undef main
 
-#define NOISYRENDER
+//#define NOISYRENDER
 #define MULTITHREAD
 
 using std::cout; using std::endl;
@@ -25,11 +25,57 @@ const int THREADS = 32;
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
-#define SCREEN_WIDTH 1920
-#define SCREEN_HEIGHT 1080
+#define SCREEN_WIDTH 800
+#define SCREEN_HEIGHT 480
 
+float flerpf(float a, float b, float t) {
+	return a * (1 - t) + b * t;
+}
 struct float3 {
 	float x, y, z;
+
+	inline float operator[](const int& idx) const {
+		switch (idx) {
+		case(0):
+			return x;
+		case(1):
+			return y;
+		case(2):
+			return z;
+		}
+	}
+	inline float operator+(const int& idx) const {
+		switch (idx) {
+		case(0):
+			return x;
+		case(1):
+			return y;
+		case(2):
+			return z;
+		}
+	}
+	inline float operator()(const int& idx) const {
+		switch (idx) {
+		case(0):
+			return x;
+		case(1):
+			return y;
+		case(2):
+			return z;
+		}
+	}
+
+	inline float3 xz() {
+		return float3(x, 0, z);
+	}
+	inline float3 xy() {
+		return float3(x, y, 0);
+	}
+	inline float3 yz() {
+		return float3(0, y, z);
+	}
+
+
 	float3(float x, float y, float z) {
 		this->x = x;
 		this->y = y;
@@ -41,12 +87,24 @@ struct float3 {
 	float MagnitudeSqrd() const {
 		return (x * x + y * y + z * z);
 	}
-	static float Dot(const float3& lhs, const float3& rhs) {
-		return (lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z);
+	static float Dot(const float3& lhs, const float3& rhs, bool noNeg = false) {
+
+		auto d = (lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z);
+		if (noNeg) {
+			return d < 0 ? 0 : d;
+		}
+		else {
+			return d;
+		}
+
 	}
 	static float3 Cross(const float3& lhs, const float3& rhs) {
 		return float3(lhs.y * rhs.z - rhs.y * lhs.z, rhs.x * lhs.z - lhs.x * rhs.z, lhs.x * rhs.y - rhs.x * lhs.y);
 	}
+	static float3 Lerp(const float3& a, const float3& b, float t) {
+		return float3(flerpf(a(0), b(0), t), flerpf(a(1), b(1), t), flerpf(a(2), b(2), t));
+	}
+
 	float3() {
 		x = 0;
 		y = 0;
@@ -64,6 +122,29 @@ struct float3 {
 	float3 operator/(const float& rhs) const {
 		return float3(x / rhs, y / rhs, z / rhs);
 	}
+
+	float3& operator-=(const float3& rhs) {
+		*this = (*this) - rhs;
+		return *this;
+	}
+	float3& operator+=(const float3& rhs) {
+		*this = (*this) + rhs;
+		return *this;
+	}
+	float3& operator*=(const float& rhs) {
+		*this = (*this) * rhs;
+		return *this;
+	}
+	float3& operator/=(const float& rhs) {
+		*this = (*this) / rhs;
+		return *this;
+	}
+
+	float3 operator*(const float3& o) {
+		return float3(x * o(0), y * o(1), z * o(2));
+	}
+
+
 	float3 Normalized() {
 		float length = Magnitude();
 		return float3(x / length, y / length, z / length);
@@ -75,10 +156,10 @@ struct float3 {
 struct Color {
 	//1 = 255
 	//0 = 0
-	float r;
-	float g;
-	float b;
-	float a;
+	float r = 0;
+	float g = 0;
+	float b = 0;
+	float a = 0;
 
 private:
 	Uint32 fromRGBA() const {
@@ -101,19 +182,43 @@ private:
 	}
 public:
 	operator Uint32() const { return fromRGBA(); }
-	
-	Color operator + (const Color& o) const {
-		return Color(r + o.r, g + o.g, b + o.b, a + o.a);
-	}
 	Color operator *(const float& rhs) const {
 		return Color(r * rhs, g * rhs, b * rhs, a * rhs);
 	}
+	Color operator *(const Color& rhs) const {
+		return Color(r * rhs.r, g * rhs.g, b * rhs.b, a * rhs.a);
+	}
+	Color operator + (const Color& o) const {
+		return Color(r + o.r, g + o.g, b + o.b, a + o.a);
+	}
+	Color operator / (const float& o) const {
+		return Color(r / o, g / o, b / o, a / o);
+	}
+	Color operator - (const Color& o) const {
+		return Color(r - o.r, g - o.g, b - o.b, a - o.a);
+	}
 
+	Color& operator += (const Color& o) {
 
+		*this = *this + o;
 
+		return *this;
+	}
+	Color& operator *=(const float& o) {
+		*this = *this * o;
 
+		return *this;
+	}
+	Color& operator -=(const Color& o) {
+		*this = *this - o;
 
+		return *this;
+	}
+	Color& operator /=(const float& o) {
+		*this = *this / o;
 
+		return *this;
+	}
 
 	Color(float r, float g, float b, float a = 0) {
 		if (r < 0) r = 0;
@@ -135,10 +240,6 @@ public:
 
 	}
 	Color() {
-		r = 1;
-		g = 1;
-		b = 1;
-		a = 1;
 	}
 
 	static Color Lerp(const Color& a, const Color& b, float time) {
@@ -218,69 +319,9 @@ private:
 		}
 		return returnResults;
 	}
-	static float3 UP;
-
-	static float3  GetNormalOrientedBakedVector(int index, const float3& normal, const float3& rayDir) {
-		float3 reflected = rayDir.Reflect(normal);
-		
-		//float dot = float3::Dot(reflected, normal);
-		//dot = dot < 0 ? 0 : dot;
-
-		float3 side1 = float3::Cross(reflected, rayDir);
-		float3 side2 = side1 * -1;
-		float3 forward = float3::Cross(side1, normal);
-		float3 backward = forward * -1;
-
-		side1 = side1 * 0.5f + normal * 0.5f;
-		side2 = side2 * 0.5f + normal * 0.5f;
-		forward = forward * 0.5f + normal * 0.5f;
-		backward = backward * 0.5f + normal * 0.5f;
-
-		float3 halfSide1 = side1 * 0.5f + forward * 0.5f;
-		float3 halfSide12 = side1 * 0.5f + backward * 0.5f;
-		float3 halfSide2 = side2 * 0.5f + forward * 0.5f;
-		float3 halfSide22 = side2 * 0.5f + backward * 0.5f;
-
-		switch (index)
-		{
-		case(0):
-			return side1.Normalized();
-		case(1):
-			return side2.Normalized();
-		case(2):
-			return forward.Normalized();
-		case(3):
-			return backward.Normalized();
-		case(4):
-			return halfSide1.Normalized();
-		case(5):
-			return halfSide12.Normalized();
-		case(6):
-			return halfSide2.Normalized();
-		case(7):
-			return halfSide22.Normalized();
-		case(8):
-			return normal;
-		case(9):
-			return reflected;
-		}
-
-		//float3 side2 = float3::Cross(reflected, normal) * -1;
-
-		//side1 = side1 * (1 - dot) + normal * dot;
-		//side2 = side2 * (1 - dot) + normal * dot;
-
-		//float3 side1Half1 = side1 * 0.5f + reflected * 0.5f;
-		//float3 side1Half2 = side2 * 0.5f + reflected * 0.5f;
-
-		//float3 side1Half3 = side1 * 0.5f + rayDir * -0.5f;
-		//float3 side1Half4 = side2 * 0.5f + rayDir * -0.5f;
-
-	}
 	static float3 RandomNormalOrientedHemisphere(const float3& normal) {
 
 		//return rayDir - normal * (2 * (float3::Dot(rayDir, normal)));
-		
 		float3 sr;
 		do {
 			sr.x = ((float)rand() / RAND_MAX - 0.5f) * 2;
@@ -347,6 +388,8 @@ public:
 			Color diffusedColor = Color(0,0,0);
 			Color reflectionColor;
 			Color specularColor = Color(0,0,0);
+			Color lightColor = SunColor;
+			float3 lighDirection = SunDirection;
 
 			//for (size_t i = 0; i < SamplesPerRay; i++)
 			//{
@@ -354,7 +397,7 @@ public:
 			//	auto sray = RandomNormalOrientedHemisphere(hit.normal);
 			//	auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
 			//	if (shit.valid) {
-			//		//diffusedColor = Color(0, 0, 0);
+			//		diffusedColor += Color(0, 0, 0);
 			//	}
 			//	else {
 			//		auto skyCol = get_environment_color(sray);
@@ -363,40 +406,43 @@ public:
 			//		diffusedColor.b += skyCol.b;
 			//		diffusedColor.a += skyCol.a;
 			//	}
-			
+			//}
 			//diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
 			//diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
-			diffusedColor = hit.color * float3::Dot(SunDirection, hit.normal);
-
-			auto sray = RandomNormalOrientedHemisphere(hit.normal);
-			auto reflectionRay = rayDirection.Reflect(hit.normal);
+			//
 			
-			reflectionRay = reflectionRay + (sray * powf((1 - smoothness), 1));
-			reflectionRay = reflectionRay.Normalized();
+			diffusedColor = hit.color;
+			float lightDot = float3::Dot(lighDirection, hit.normal);
 
-			//not pbr, but close enough
+			//auto sray = RandomNormalOrientedHemisphere(hit.normal);
+			//auto reflectionRay = rayDirection.Reflect(hit.normal);
+			//
+			//reflectionRay = reflectionRay + (sray * powf((1 - smoothness), 1));
+			//reflectionRay = reflectionRay.Normalized();
 
-			auto reflectionObject = GetClosestObject(hit.point + hit.normal * 0.05f, reflectionRay);
-			if (reflectionObject.valid) {
-				reflectionColor = hit.color * (1 - ((Object*)hit.object)->metalness);
-			}
-			else {
-				reflectionColor = get_environment_color(reflectionRay);
-				float specDot = float3::Dot(reflectionRay, SunDirection);
-				specDot = specDot < 0 ? 0 : specDot;
-				float temp = (specDot - smoothness) * (1 / (1 - smoothness));
-				temp = temp < 0 ? 0 : temp;
+			////not pbr, but close enough
 
-				//specular size approximation, custom model
-				specularColor = SunColor * powf(temp, 2) * (smoothness * smoothness * smoothness);
-			}
+			//auto reflectionObject = GetClosestObject(hit.point + hit.normal * 0.05f, reflectionRay);
+			//if (reflectionObject.valid) {
+			//	reflectionColor = hit.color * (1 - ((Object*)hit.object)->metalness);
+			//}
+			//else {
+			//	reflectionColor = get_environment_color(reflectionRay);
+			//	float specDot = float3::Dot(reflectionRay, lighDirection);
+			//	specDot = specDot < 0 ? 0 : specDot;
+			//	float temp = (specDot - smoothness) * (1 / (1 - smoothness));
+			//	temp = temp < 0 ? 0 : temp;
 
-			//80% of diffused color is present and 20% of reflections are present
-			//as metalness goes up, diffuse approaches 0 and reflections dominate.
-			Color diffuseReflection = (diffusedColor * (0.8f * (1 - metalness)) + (reflectionColor * (0.2f * (1 - metalness) + 1.0f * metalness)));
+			//	//specular size approximation, custom model
+			//	specularColor = lightColor * powf(temp, 2) * (smoothness * smoothness * smoothness);
+			//}
+
+			////80% of diffused color is present and 20% of reflections are present
+			////as metalness goes up, diffuse approaches 0 and reflections dominate.
+			//Color diffuseReflection = (diffusedColor * (0.8f * (1 - metalness)) + (reflectionColor * (0.2f * (1 - metalness) + 1.0f * metalness)));
 
 			//add specular reflection
-			return diffuseReflection + specularColor + (Color(diffusedColor.r * SunColor.r, diffusedColor.g * SunColor.g, diffusedColor.b * SunColor.b)) * float3::Dot(SunDirection, hit.normal) * (1 - metalness);
+			return Color(1,1,1) * lightDot;// +specularColor + (diffusedColor * lightColor) * float3::Dot(lighDirection, hit.normal) * (1 - metalness);
 		}
 
 		return get_environment_color(rayDirection);
@@ -424,7 +470,6 @@ public:
 	}
 };
 
-float3 Object::UP = float3(0, 1, 0);
 int Object::MaxRaytraceBounces = 1;
 int Object::SamplesPerRay = 8;
 char Object::RaytraceRenderMode = 0;
@@ -500,6 +545,71 @@ public:
 			hitResults.point = hitPoint;
 			hitResults.distance = distance;
 			hitResults.valid = true;
+			hitResults.object = (void*)this;
+		}
+		return hitResults;
+	}
+};
+class Plane : public Object {
+public:
+	Plane(float3 size, float3 normal, float3 position) : Object(){
+		transform.scale = size;
+		transform.forward = float3(normal.x, normal.z, normal.y);
+		transform.position = float3(position.x, position.y, position.z);
+	}
+public:
+	Rayhit Raytrace(const float3& rayOrigin, const float3& rayDir) const override {
+
+		Color color;
+		float3 normal, hitPoint;
+		float distance;
+		Rayhit hitResults;
+		
+		//Nx(x - Px) + Ny(y - Py) + Nz(z - Pz) = 0
+		//Nx(rayOrigin.x + rayDir.x * t - Px)
+		//Ny(rayOrigin.y + rayDir.y * t - Py)
+		//Nz(rayOrigin.z + rayDir.z * t - Pz)
+
+		//Nx * rayOrigin.x + Nx * rayDir.x + Nx * t - Nx * Px
+		//Ny * rayOrigin.y + Ny * rayDir.y + Ny * t - Ny * Py
+		//Nz * rayOrigin.z + Nz * rayDir.z + Nz * t - Nz * Pz
+
+		//-Nx * t -Ny * t -Nz * t
+		//t * (-Nx - Ny - Nz)
+		//(Nx * rayOrigin.x + Nx * rayDir.x - Px * Nx) / (-Nx - Ny - Nz)
+
+		float denom = float3::Dot(rayDir, transform.forward);
+		if (denom < 0) {
+			float Nx = transform.forward.x;
+			float Ny = transform.forward.y;
+			float Nz = transform.forward.z;
+			
+			float Px = transform.position.x;
+			float Py = transform.position.y;
+			float Pz = transform.position.z;
+
+			float d = (-Nx - Ny - Nz);
+			float xSum = (Nx * rayOrigin.x + Nx * rayDir.x - Px * Nx) / d;
+			float ySum = (Ny * rayOrigin.y + Ny * rayDir.y - Py * Ny) / d;
+			float zSum = (Nz * rayOrigin.z + Nz * rayDir.z - Pz * Nz) / d;
+			
+			float t = xSum + ySum + zSum;
+
+			float iX = rayOrigin.x + rayDir.x * t;
+			float iY = rayOrigin.y + rayDir.y * t;
+			float iZ = rayOrigin.z + rayDir.z * t;
+
+			float3 intersection = float3(iX, iY, iZ);
+
+
+			hitResults.distance = (intersection - rayOrigin).Magnitude();
+
+			hitResults.valid = true;
+			hitResults.color = color * hitResults.distance;
+			hitResults.point = intersection;
+			hitResults.object = (void*)this;
+			hitResults.normal = transform.forward;
+			return hitResults;
 		}
 		return hitResults;
 	}
@@ -697,7 +807,7 @@ int main()
 	const unsigned int raytraceSamples = 4096 * 12;
 	int mouseX = 0;
 	int mouseY = 0;
-	float mouseSpeed = 1;
+	float mouseSpeed = .1;
 
 	Object* d;
 	int s = 8;
@@ -713,15 +823,14 @@ int main()
 			d->color = Color(1, 0, 0);
 		}
 	}
-	//d = new Sphere(1, float3(0, 0, 5));
-	//d->color = Color(1, 0, 0);
+	d = new Plane(float3(1,1,1), float3(0,1,0), float3(0, -5,0));
+	d->color = Color(1, 0, 0);
+	
 	printf("Finished creating objects");
 
 	int ss = raytraceSamples * 0.25f;
 
 #ifdef MULTITHREAD
-
-
 	int div = round(SCREEN_WIDTH / (THREADS));
 	for (size_t i = 0; i < THREADS; i++)
 	{
@@ -734,21 +843,12 @@ int main()
 		int initialX = div * i;
 		renderWorkers[i] = new std::thread(renderArea, i, initialX, initialX + div, 0, SCREEN_HEIGHT, raytraceSamples / THREADS, &camera, screen);
 	}
-
-	//std::thread* q1;
-	//std::thread* q2;
-	//std::thread* q3;
-	//std::thread* q4;
-	//q1 = new std::thread(renderQuadrant, 1, raytraceSamples, &camera, screen);
-	//q2 = new std::thread(renderQuadrant, 2, raytraceSamples, &camera, screen);
-	//q3 = new std::thread(renderQuadrant, 3, raytraceSamples, &camera, screen);
-	//q4 = new std::thread(renderQuadrant, 4, raytraceSamples, &camera, screen);
-
 #endif // MULTITHREAD
+	
+	
 	std::chrono::steady_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 	bool pause = false;
 	while (true) {
-
 
 #ifndef MULTITHREAD
 		t1 = std::chrono::high_resolution_clock::now();
@@ -763,6 +863,8 @@ int main()
 		//game loop
 		if (!pause) {
 
+
+#ifndef  MULTITHREAD
 			SDL_GetRelativeMouseState(&mouseX, &mouseY);
 			camera.RotateAboutAxis(mouseX * mouseSpeed * delta, WORLDUP);
 			camera.RotateAboutAxis(mouseY * mouseSpeed * delta, camera.right);
@@ -789,6 +891,8 @@ int main()
 			if (state[SDL_SCANCODE_Q]) {
 				camera.position = camera.position - camera.up * speed;
 			}
+#endif // ! MULTITHREAD
+
 
 #ifdef  MULTITHREAD
 
@@ -802,6 +906,33 @@ int main()
 			}
 
 			if (!falseCheck) {
+				SDL_GetRelativeMouseState(&mouseX, &mouseY);
+				camera.RotateAboutAxis(mouseX* mouseSpeed* delta, WORLDUP);
+				camera.RotateAboutAxis(mouseY* mouseSpeed* delta, camera.right);
+
+				float speed = delta;
+				if (state[SDL_SCANCODE_LSHIFT]) {
+					speed = 2 * delta;
+				}
+				if (state[SDL_SCANCODE_W]) {
+					camera.position = camera.position + camera.forward * speed;
+				}
+				if (state[SDL_SCANCODE_D]) {
+					camera.position = camera.position + camera.right * speed;
+				}
+				if (state[SDL_SCANCODE_A]) {
+					camera.position = camera.position - camera.right * speed;
+				}
+				if (state[SDL_SCANCODE_S]) {
+					camera.position = camera.position - camera.forward * speed;
+				}
+				if (state[SDL_SCANCODE_E]) {
+					camera.position = camera.position + camera.up * speed;
+				}
+				if (state[SDL_SCANCODE_Q]) {
+					camera.position = camera.position - camera.up * speed;
+				}
+
 				SDL_UpdateWindowSurface(window);
 				auto t2 = std::chrono::high_resolution_clock::now();
 				frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
@@ -817,9 +948,6 @@ int main()
 				{
 					waitWorkerFlags[i] = false;
 				}
-			}
-			else {
-				delta = 0;
 			}
 
 			//if (finished1 && finished2 && finished3 && finished4) {
