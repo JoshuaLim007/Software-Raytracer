@@ -21,12 +21,12 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
-const int THREADS = 32;
+const int THREADS = 128;
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 480
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 
 float flerpf(float a, float b, float t) {
 	return a * (1 - t) + b * t;
@@ -98,6 +98,9 @@ struct float3 {
 		}
 
 	}
+	const float3& abs() const {
+		return float3(fabsf(x), fabsf(y), fabsf(z));
+	}
 	static float3 Cross(const float3& lhs, const float3& rhs) {
 		return float3(lhs.y * rhs.z - rhs.y * lhs.z, rhs.x * lhs.z - lhs.x * rhs.z, lhs.x * rhs.y - rhs.x * lhs.y);
 	}
@@ -123,6 +126,14 @@ struct float3 {
 		return float3(x / rhs, y / rhs, z / rhs);
 	}
 
+
+	static float3 ComponentMultiply(float3 lhs, float3 rhs) {
+		return float3(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z);
+	}
+	static float3 ComponentDivide(float3 lhs, float3 rhs) {
+		return float3(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
+	}
+
 	float3& operator-=(const float3& rhs) {
 		*this = (*this) - rhs;
 		return *this;
@@ -145,11 +156,11 @@ struct float3 {
 	}
 
 
-	float3 Normalized() {
+	const float3& Normalized() const {
 		float length = Magnitude();
 		return float3(x / length, y / length, z / length);
 	}
-	float3 Reflect(const float3& normal) const {
+	const float3& Reflect(const float3& normal) const {
 		return *this - normal * (2 * (float3::Dot(*this, normal)));
 	}
 };
@@ -412,7 +423,7 @@ public:
 			//
 			
 			diffusedColor = hit.color;
-			float lightDot = float3::Dot(lighDirection, hit.normal);
+			float lightDot = float3::Dot(lighDirection, hit.normal, true);
 
 			//auto sray = RandomNormalOrientedHemisphere(hit.normal);
 			//auto reflectionRay = rayDirection.Reflect(hit.normal);
@@ -442,7 +453,7 @@ public:
 			//Color diffuseReflection = (diffusedColor * (0.8f * (1 - metalness)) + (reflectionColor * (0.2f * (1 - metalness) + 1.0f * metalness)));
 
 			//add specular reflection
-			return Color(1,1,1) * lightDot;// +specularColor + (diffusedColor * lightColor) * float3::Dot(lighDirection, hit.normal) * (1 - metalness);
+			return diffusedColor * lightDot;// +specularColor + (diffusedColor * lightColor) * float3::Dot(lighDirection, hit.normal) * (1 - metalness);
 		}
 
 		return get_environment_color(rayDirection);
@@ -554,7 +565,7 @@ class Plane : public Object {
 public:
 	Plane(float3 size, float3 normal, float3 position) : Object(){
 		transform.scale = size;
-		transform.forward = float3(normal.x, normal.z, normal.y);
+		transform.forward = float3(normal.x, normal.y, normal.z);
 		transform.position = float3(position.x, position.y, position.z);
 	}
 public:
@@ -565,50 +576,24 @@ public:
 		float distance;
 		Rayhit hitResults;
 		
-		//Nx(x - Px) + Ny(y - Py) + Nz(z - Pz) = 0
-		//Nx(rayOrigin.x + rayDir.x * t - Px)
-		//Ny(rayOrigin.y + rayDir.y * t - Py)
-		//Nz(rayOrigin.z + rayDir.z * t - Pz)
+		//float denom = float3::Dot(rayDir, transform.forward);
 
-		//Nx * rayOrigin.x + Nx * rayDir.x + Nx * t - Nx * Px
-		//Ny * rayOrigin.y + Ny * rayDir.y + Ny * t - Ny * Py
-		//Nz * rayOrigin.z + Nz * rayDir.z + Nz * t - Nz * Pz
+		float num = float3::Dot(transform.forward, rayOrigin - transform.position);
+		float denom = float3::Dot(transform.forward, rayDir);
+		float t = (num / denom);
 
-		//-Nx * t -Ny * t -Nz * t
-		//t * (-Nx - Ny - Nz)
-		//(Nx * rayOrigin.x + Nx * rayDir.x - Px * Nx) / (-Nx - Ny - Nz)
-
-		float denom = float3::Dot(rayDir, transform.forward);
-		if (denom < 0) {
-			float Nx = transform.forward.x;
-			float Ny = transform.forward.y;
-			float Nz = transform.forward.z;
+		if (t < 0 && denom < 0) {
 			
-			float Px = transform.position.x;
-			float Py = transform.position.y;
-			float Pz = transform.position.z;
+			float3 tt = (rayDir * t);
+			float3 intersection = tt + rayOrigin;
 
-			float d = (-Nx - Ny - Nz);
-			float xSum = (Nx * rayOrigin.x + Nx * rayDir.x - Px * Nx) / d;
-			float ySum = (Ny * rayOrigin.y + Ny * rayDir.y - Py * Ny) / d;
-			float zSum = (Nz * rayOrigin.z + Nz * rayDir.z - Pz * Nz) / d;
-			
-			float t = xSum + ySum + zSum;
-
-			float iX = rayOrigin.x + rayDir.x * t;
-			float iY = rayOrigin.y + rayDir.y * t;
-			float iZ = rayOrigin.z + rayDir.z * t;
-
-			float3 intersection = float3(iX, iY, iZ);
-
-
-			hitResults.distance = (intersection - rayOrigin).Magnitude();
+			hitResults.distance = tt.Magnitude();
 
 			hitResults.valid = true;
-			hitResults.color = color * hitResults.distance;
+			hitResults.color = this->color;//// *(hitResults.distance / 100.0f);// / 1.0f);
 			hitResults.point = intersection;
 			hitResults.object = (void*)this;
-			hitResults.normal = transform.forward;
+			hitResults.normal = transform.forward.Normalized();
 			return hitResults;
 		}
 		return hitResults;
@@ -655,76 +640,6 @@ std::uniform_int_distribution<int>* dice_distribution = new std::uniform_int_dis
 //bool finished4 = false;
 
 bool suspendAllThreads = false;
-
-//void renderQuadrant (uint8_t quadrant, unsigned int raytraceSamples, const Transform *camera, SDL_Surface* renderTexture){
-//
-//	//min inclusive
-//	//max exclusive
-//
-//	auto* rand = &rand1;
-//	bool *waitFlag;
-//	int xRangeMin = 0, xRangeMax = 0;
-//	int yRangeMin = 0, yRangeMax = 0;
-//	switch (quadrant)
-//	{
-//	case(1):
-//		rand = &rand1;
-//		xRangeMin = (SCREEN_WIDTH / 2);
-//		xRangeMax = SCREEN_WIDTH;
-//
-//		yRangeMin = (SCREEN_HEIGHT / 2);
-//		yRangeMax = SCREEN_HEIGHT;
-//		waitFlag = &finished1;
-//		break;
-//	case(2):
-//		rand = &rand2;
-//		xRangeMin = 0;
-//		xRangeMax = (SCREEN_WIDTH / 2);
-//
-//		yRangeMin = (SCREEN_HEIGHT / 2);
-//		yRangeMax = SCREEN_HEIGHT;
-//		waitFlag = &finished2;
-//		break;
-//	case(3):
-//		rand = &rand3;
-//		xRangeMin = 0;
-//		xRangeMax = (SCREEN_WIDTH / 2);
-//
-//		yRangeMin = 0;
-//		yRangeMax = (SCREEN_HEIGHT / 2);
-//		waitFlag = &finished3;
-//		break;
-//	case(4):
-//		rand = &rand4;
-//		xRangeMin = (SCREEN_WIDTH / 2);
-//		xRangeMax = SCREEN_WIDTH;
-//
-//		yRangeMin = 0;
-//		yRangeMax = (SCREEN_HEIGHT / 2);
-//		waitFlag = &finished4;
-//		break;
-//	default:
-//		return;
-//	}
-//	
-//
-//	while (!suspendAllThreads) {
-//		if (*waitFlag == false) {
-//			for (size_t i = 0; i < raytraceSamples; i++)
-//			{
-//				int randX = lroundf(xRangeMin + ((float)(*rand)() / INT_MAX) * (xRangeMax - xRangeMin - 1));
-//				int randY = lroundf(yRangeMin + ((float)(*rand)() / INT_MAX) * (yRangeMax - yRangeMin - 1));
-//				float3 rayDirection = GetRayDirection(*camera, randX, randY);
-//				auto color = Object::RaytraceScene((*camera).position, rayDirection);
-//				set_pixel(randX, randY, color, renderTexture);
-//			}
-//			*waitFlag = true;
-//		}
-//		else {
-//			Sleep(1);
-//		}
-//	}
-//};
 
 auto renderWorkers = new std::thread * [THREADS];
 auto waitWorkerFlags = new bool[THREADS];
@@ -823,13 +738,42 @@ int main()
 			d->color = Color(1, 0, 0);
 		}
 	}
-	d = new Plane(float3(1,1,1), float3(0,1,0), float3(0, -5,0));
+	
+	
+	int boxSize = 5;
+	
+	//floor
+	d = new Plane(float3(1,1,1), float3(0, boxSize,0), float3(0, -boxSize, 5));
+	d->color = Color(0, 0, 1);
+
+	//ceiling
+	d = new Plane(float3(1, 1, 1), float3(0, -boxSize, 0), float3(0, boxSize, 5));
+	d->color = Color(1, 1, 1);
+	
+	//left wall
+	d = new Plane(float3(1, 1, 1), float3(boxSize, 0, 0), float3(-boxSize, 0, 5));
 	d->color = Color(1, 0, 0);
 	
+	//right wall
+	d = new Plane(float3(1, 1, 1), float3(-boxSize, 0, 0), float3(boxSize, 0, 5));
+	d->color = Color(0, 1, 0);
+	
+	//front wall
+	d = new Plane(float3(1, 1, 1), float3(0, 0, -boxSize), float3(0, 0, boxSize + 5));
+	d->color = Color(1, 1, 1);
+	
+	//backwall
+	d = new Plane(float3(1, 1, 1), float3(0, 0, boxSize), float3(0, 0, -boxSize ));
+	d->color = Color(1, 1, 1);
+
+
 	printf("Finished creating objects");
 
 	int ss = raytraceSamples * 0.25f;
+	float time = 0;
 
+
+	//initialize threads
 #ifdef MULTITHREAD
 	int div = round(SCREEN_WIDTH / (THREADS));
 	for (size_t i = 0; i < THREADS; i++)
@@ -910,9 +854,9 @@ int main()
 				camera.RotateAboutAxis(mouseX* mouseSpeed* delta, WORLDUP);
 				camera.RotateAboutAxis(mouseY* mouseSpeed* delta, camera.right);
 
-				float speed = delta;
+				float speed = delta * 5;
 				if (state[SDL_SCANCODE_LSHIFT]) {
-					speed = 2 * delta;
+					speed *= 2;
 				}
 				if (state[SDL_SCANCODE_W]) {
 					camera.position = camera.position + camera.forward * speed;
@@ -933,6 +877,7 @@ int main()
 					camera.position = camera.position - camera.up * speed;
 				}
 
+				time += delta;
 				SDL_UpdateWindowSurface(window);
 				auto t2 = std::chrono::high_resolution_clock::now();
 				frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
