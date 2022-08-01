@@ -21,12 +21,13 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
-const int THREADS = 128;
+const int THREADS = 64;
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
 #define SCREEN_WIDTH 1280
 #define SCREEN_HEIGHT 720
+#define RENDER_SCALE 1
 
 float flerpf(float a, float b, float t) {
 	return a * (1 - t) + b * t;
@@ -284,6 +285,7 @@ float3 SunDirection = float3(.5, 1, .5);
 Color SkyColor = Color(1, 1.2, 1.5);
 Color GroundColor = Color(0, 0, 0);
 Color SunColor = Color(6, 6, 6);
+Color** RenderBuffer;
 
 
 void set_pixel(const int& x, const int& y, const Color& color, const SDL_Surface* surface) {
@@ -402,27 +404,27 @@ public:
 			Color lightColor = SunColor;
 			float3 lighDirection = SunDirection;
 
-			//for (size_t i = 0; i < SamplesPerRay; i++)
-			//{
-			//	//auto sray = RandomNormalOrientedHemisphere(hit.normal);
-			//	auto sray = RandomNormalOrientedHemisphere(hit.normal);
-			//	auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
-			//	if (shit.valid) {
-			//		diffusedColor += Color(0, 0, 0);
-			//	}
-			//	else {
-			//		auto skyCol = get_environment_color(sray);
-			//		diffusedColor.r += skyCol.r;
-			//		diffusedColor.g += skyCol.g;
-			//		diffusedColor.b += skyCol.b;
-			//		diffusedColor.a += skyCol.a;
-			//	}
-			//}
-			//diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
-			//diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
-			//
+			for (size_t i = 0; i < SamplesPerRay; i++)
+			{
+				//auto sray = RandomNormalOrientedHemisphere(hit.normal);
+				auto sray = RandomNormalOrientedHemisphere(hit.normal);
+				auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
+				if (shit.valid) {
+				
+				}
+				else {
+					auto skyCol = get_environment_color(sray);
+					diffusedColor.r += skyCol.r;
+					diffusedColor.g += skyCol.g;
+					diffusedColor.b += skyCol.b;
+					diffusedColor.a += skyCol.a;
+				}
+			}
+			diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
+			diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
 			
-			diffusedColor = hit.color;
+			
+			//diffusedColor = hit.color;
 			float lightDot = float3::Dot(lighDirection, hit.normal, true);
 
 			//auto sray = RandomNormalOrientedHemisphere(hit.normal);
@@ -453,7 +455,7 @@ public:
 			//Color diffuseReflection = (diffusedColor * (0.8f * (1 - metalness)) + (reflectionColor * (0.2f * (1 - metalness) + 1.0f * metalness)));
 
 			//add specular reflection
-			return diffusedColor * lightDot;// +specularColor + (diffusedColor * lightColor) * float3::Dot(lighDirection, hit.normal) * (1 - metalness);
+			return diffusedColor;// +specularColor + (diffusedColor * lightColor) * float3::Dot(lighDirection, hit.normal) * (1 - metalness);
 		}
 
 		return get_environment_color(rayDirection);
@@ -482,7 +484,7 @@ public:
 };
 
 int Object::MaxRaytraceBounces = 1;
-int Object::SamplesPerRay = 8;
+int Object::SamplesPerRay = 128;
 char Object::RaytraceRenderMode = 0;
 std::vector<Object*> Object::allObjects = std::vector<Object*>();
 
@@ -644,6 +646,8 @@ bool suspendAllThreads = false;
 auto renderWorkers = new std::thread * [THREADS];
 auto waitWorkerFlags = new bool[THREADS];
 auto randFunctions = new std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>*[THREADS];
+
+
 void renderArea(
 	unsigned int index,
 	unsigned int minX, unsigned int maxX, 
@@ -673,9 +677,13 @@ void renderArea(
 			{
 				for (size_t j = minY; j < maxY; j++)
 				{
-					float3 rayDirection = GetRayDirection(*camera, i, j);
-					auto color = Object::RaytraceScene((*camera).position, rayDirection);
-					set_pixel(i, j, color, renderTexture);
+					if (i % (RENDER_SCALE) == 0 && j % (RENDER_SCALE) == 0) {
+						float3 rayDirection = GetRayDirection(*camera, i, j);
+						auto color = Object::RaytraceScene((*camera).position, rayDirection);
+						RenderBuffer[i / RENDER_SCALE][j / RENDER_SCALE] = color;
+					}
+					set_pixel(i, j, RenderBuffer[i / RENDER_SCALE][j / RENDER_SCALE], renderTexture);
+
 				}
 			}
 
@@ -689,6 +697,30 @@ void renderArea(
 	}
 };
 
+void InitBuffer() {
+
+	if (RenderBuffer != NULL) {
+		for (size_t i = 0; i < SCREEN_WIDTH / RENDER_SCALE; i++)
+		{
+			for (size_t j = 0; j < SCREEN_HEIGHT / RENDER_SCALE; j++)
+			{
+				delete[] RenderBuffer[i];
+			}
+		}
+		delete[] RenderBuffer;
+	}
+
+	RenderBuffer = new Color * [SCREEN_WIDTH / RENDER_SCALE];
+
+	for (size_t i = 0; i < SCREEN_WIDTH / RENDER_SCALE; i++)
+	{
+		RenderBuffer[i] = new Color[SCREEN_HEIGHT / RENDER_SCALE];
+		for (size_t j = 0; j < SCREEN_HEIGHT / RENDER_SCALE; j++)
+		{
+			RenderBuffer[i][j] = Color(0, 0, 0);
+		}
+	}
+}
 
 int main()
 {
@@ -698,6 +730,7 @@ int main()
 	SDL_Window* window = SDL_CreateWindow("Raytracer", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_VULKAN);
 	SDL_Surface* screen = SDL_GetWindowSurface(window);
 
+	InitBuffer();
 
 	SDL_FillRect(screen, 0, Color(0, 0, 0, 0));
 	auto cursor = SDL_GetDefaultCursor();
@@ -746,25 +779,25 @@ int main()
 	d = new Plane(float3(1,1,1), float3(0, boxSize,0), float3(0, -boxSize, 5));
 	d->color = Color(0, 0, 1);
 
-	//ceiling
-	d = new Plane(float3(1, 1, 1), float3(0, -boxSize, 0), float3(0, boxSize, 5));
-	d->color = Color(1, 1, 1);
-	
-	//left wall
-	d = new Plane(float3(1, 1, 1), float3(boxSize, 0, 0), float3(-boxSize, 0, 5));
-	d->color = Color(1, 0, 0);
-	
-	//right wall
-	d = new Plane(float3(1, 1, 1), float3(-boxSize, 0, 0), float3(boxSize, 0, 5));
-	d->color = Color(0, 1, 0);
-	
-	//front wall
-	d = new Plane(float3(1, 1, 1), float3(0, 0, -boxSize), float3(0, 0, boxSize + 5));
-	d->color = Color(1, 1, 1);
-	
-	//backwall
-	d = new Plane(float3(1, 1, 1), float3(0, 0, boxSize), float3(0, 0, -boxSize ));
-	d->color = Color(1, 1, 1);
+	////ceiling
+	//d = new Plane(float3(1, 1, 1), float3(0, -boxSize, 0), float3(0, boxSize, 5));
+	//d->color = Color(1, 1, 1);
+	//
+	////left wall
+	//d = new Plane(float3(1, 1, 1), float3(boxSize, 0, 0), float3(-boxSize, 0, 5));
+	//d->color = Color(1, 0, 0);
+	//
+	////right wall
+	//d = new Plane(float3(1, 1, 1), float3(-boxSize, 0, 0), float3(boxSize, 0, 5));
+	//d->color = Color(0, 1, 0);
+	//
+	////front wall
+	//d = new Plane(float3(1, 1, 1), float3(0, 0, -boxSize), float3(0, 0, boxSize + 5));
+	//d->color = Color(1, 1, 1);
+	//
+	////backwall
+	//d = new Plane(float3(1, 1, 1), float3(0, 0, boxSize), float3(0, 0, -boxSize ));
+	//d->color = Color(1, 1, 1);
 
 
 	printf("Finished creating objects");
@@ -840,16 +873,16 @@ int main()
 
 #ifdef  MULTITHREAD
 
-			bool falseCheck = false;
+			bool threadFlag = false;
 			for (size_t i = 0; i < THREADS; i++)
 			{
 				if (waitWorkerFlags[i] == false) {
-					falseCheck = true;
+					threadFlag = true;
 					break;
 				}
 			}
 
-			if (!falseCheck) {
+			if (!threadFlag) {
 				SDL_GetRelativeMouseState(&mouseX, &mouseY);
 				camera.RotateAboutAxis(mouseX* mouseSpeed* delta, WORLDUP);
 				camera.RotateAboutAxis(mouseY* mouseSpeed* delta, camera.right);
@@ -858,24 +891,27 @@ int main()
 				if (state[SDL_SCANCODE_LSHIFT]) {
 					speed *= 2;
 				}
+				float3 moveDir = float3(0,0,0);
 				if (state[SDL_SCANCODE_W]) {
-					camera.position = camera.position + camera.forward * speed;
+					moveDir = camera.forward;
 				}
 				if (state[SDL_SCANCODE_D]) {
-					camera.position = camera.position + camera.right * speed;
+					moveDir += camera.right;
 				}
 				if (state[SDL_SCANCODE_A]) {
-					camera.position = camera.position - camera.right * speed;
+					moveDir -= camera.right;
 				}
 				if (state[SDL_SCANCODE_S]) {
-					camera.position = camera.position - camera.forward * speed;
+					moveDir -= camera.forward;
 				}
 				if (state[SDL_SCANCODE_E]) {
-					camera.position = camera.position + camera.up * speed;
+					moveDir += camera.up;
 				}
 				if (state[SDL_SCANCODE_Q]) {
-					camera.position = camera.position - camera.up * speed;
+					moveDir -= camera.up;
 				}
+				if(moveDir.MagnitudeSqrd() != 0)
+					camera.position = camera.position + moveDir.Normalized() * speed;
 
 				time += delta;
 				SDL_UpdateWindowSurface(window);
