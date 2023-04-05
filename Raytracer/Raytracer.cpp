@@ -14,6 +14,7 @@
 
 //#define NOISYRENDER
 #define MULTITHREAD
+#define THREADS 8
 
 using std::cout; using std::endl;
 using std::chrono::duration_cast;
@@ -21,12 +22,11 @@ using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::chrono::system_clock;
 
-const int THREADS = 64;
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 360
 #define RENDER_SCALE 1
 
 float flerpf(float a, float b, float t) {
@@ -206,6 +206,9 @@ public:
 	Color operator / (const float& o) const {
 		return Color(r / o, g / o, b / o, a / o);
 	}
+	Color operator / (const Color& o) const {
+		return Color(r / o.r, g / o.g, b / o.b, a / o.a);
+	}
 	Color operator - (const Color& o) const {
 		return Color(r - o.r, g - o.g, b - o.b, a - o.a);
 	}
@@ -284,7 +287,7 @@ struct Rayhit {
 float3 SunDirection = float3(.5, 1, .5);
 Color SkyColor = Color(1, 1.2, 1.5);
 Color GroundColor = Color(0, 0, 0);
-Color SunColor = Color(6, 6, 6);
+Color SunColor = Color(100, 100, 100);
 Color** RenderBuffer;
 
 
@@ -309,6 +312,9 @@ Color get_environment_color(const float3& rayDirection) {
 		upd = fabsf(upd);
 		return Color::Lerp(halfColor, GroundColor, powf(upd, 0.25f));
 	}
+}
+Color reinhardTonemap(const Color& in){
+	return in / (Color(1 + in.r, 1+ in.g, 1+in.b, 1 + in.a));
 }
 
 class Object {
@@ -406,7 +412,6 @@ public:
 
 			for (size_t i = 0; i < SamplesPerRay; i++)
 			{
-				//auto sray = RandomNormalOrientedHemisphere(hit.normal);
 				auto sray = RandomNormalOrientedHemisphere(hit.normal);
 				auto shit = GetClosestObject(hit.point + hit.normal * 0.05f, sray);
 				if (shit.valid) {
@@ -420,42 +425,40 @@ public:
 					diffusedColor.a += skyCol.a;
 				}
 			}
+
 			diffusedColor = diffusedColor * (1.0f / SamplesPerRay);
 			diffusedColor = Color(hit.color.r * diffusedColor.r, hit.color.g * diffusedColor.g, hit.color.b * diffusedColor.b);
 			
-			
-			//diffusedColor = hit.color;
 			float lightDot = float3::Dot(lighDirection, hit.normal, true);
 
-			//auto sray = RandomNormalOrientedHemisphere(hit.normal);
-			//auto reflectionRay = rayDirection.Reflect(hit.normal);
-			//
-			//reflectionRay = reflectionRay + (sray * powf((1 - smoothness), 1));
-			//reflectionRay = reflectionRay.Normalized();
+			auto sray = RandomNormalOrientedHemisphere(hit.normal);
+			auto reflectionRay = rayDirection.Reflect(hit.normal);			
+			reflectionRay = reflectionRay + (sray * powf((1 - smoothness), 1));
+			reflectionRay = reflectionRay.Normalized();
 
 			////not pbr, but close enough
-
-			//auto reflectionObject = GetClosestObject(hit.point + hit.normal * 0.05f, reflectionRay);
-			//if (reflectionObject.valid) {
-			//	reflectionColor = hit.color * (1 - ((Object*)hit.object)->metalness);
-			//}
-			//else {
-			//	reflectionColor = get_environment_color(reflectionRay);
-			//	float specDot = float3::Dot(reflectionRay, lighDirection);
-			//	specDot = specDot < 0 ? 0 : specDot;
-			//	float temp = (specDot - smoothness) * (1 / (1 - smoothness));
-			//	temp = temp < 0 ? 0 : temp;
-
-			//	//specular size approximation, custom model
-			//	specularColor = lightColor * powf(temp, 2) * (smoothness * smoothness * smoothness);
-			//}
+			auto reflectionObject = GetClosestObject(hit.point + hit.normal * 0.05f, reflectionRay);
+			if (reflectionObject.valid) {
+				reflectionColor = hit.color * (1 - ((Object*)hit.object)->metalness);
+			}
+			else {
+				reflectionColor = get_environment_color(reflectionRay);
+				float specDot = float3::Dot(reflectionRay, lighDirection);
+				specDot = specDot < 0 ? 0 : specDot;
+				float temp = (specDot - smoothness) * (1 / (1 - smoothness));
+				temp = temp < 0 ? 0 : temp;
+				//specular size approximation, custom model
+				specularColor = lightColor * powf(temp, 2) * (smoothness * smoothness * smoothness);
+			}
 
 			////80% of diffused color is present and 20% of reflections are present
 			////as metalness goes up, diffuse approaches 0 and reflections dominate.
-			//Color diffuseReflection = (diffusedColor * (0.8f * (1 - metalness)) + (reflectionColor * (0.2f * (1 - metalness) + 1.0f * metalness)));
+			Color diffuseReflection = (diffusedColor * (0.8f * (1 - metalness)) + (reflectionColor * (0.2f * (1 - metalness) + 1.0f * metalness)));
+
+			Color finalColor = diffuseReflection + specularColor + (diffusedColor * lightColor) * float3::Dot(lighDirection, hit.normal) * (1 - metalness);
 
 			//add specular reflection
-			return diffusedColor;// +specularColor + (diffusedColor * lightColor) * float3::Dot(lighDirection, hit.normal) * (1 - metalness);
+			return reinhardTonemap(finalColor);
 		}
 
 		return get_environment_color(rayDirection);
@@ -484,7 +487,7 @@ public:
 };
 
 int Object::MaxRaytraceBounces = 1;
-int Object::SamplesPerRay = 128;
+int Object::SamplesPerRay = 8;
 char Object::RaytraceRenderMode = 0;
 std::vector<Object*> Object::allObjects = std::vector<Object*>();
 
@@ -626,23 +629,8 @@ float3 GetRayDirection(const Transform& cameraTransform, const int& pixelX, cons
 	return pos;
 }
 
-
 std::uniform_int_distribution<int>* dice_distribution = new std::uniform_int_distribution<int>(0, INT_MAX);
-//std::mt19937* rnd1 = new std::mt19937();
-//std::mt19937* rnd2 = new std::mt19937();
-//std::mt19937* rnd3 = new std::mt19937();
-//std::mt19937* rnd4 = new std::mt19937();
-//auto rand1 = std::bind(*dice_distribution, *rnd1);
-//auto rand2 = std::bind(*dice_distribution, *rnd2);
-//auto rand3 = std::bind(*dice_distribution, *rnd3);
-//auto rand4 = std::bind(*dice_distribution, *rnd4);
-//bool finished1 = false;
-//bool finished2 = false;
-//bool finished3 = false;
-//bool finished4 = false;
-
 bool suspendAllThreads = false;
-
 auto renderWorkers = new std::thread * [THREADS];
 auto waitWorkerFlags = new bool[THREADS];
 auto randFunctions = new std::_Binder<std::remove_cv<std::_Unforced>::type, std::uniform_int_distribution<int>&, std::mt19937&>*[THREADS];
@@ -690,6 +678,7 @@ void renderArea(
 #endif // NOISYRENDER
 
 			waitWorkerFlags[index] = true;
+			break;
 		}
 		else {
 			Sleep(1);
@@ -777,7 +766,8 @@ int main()
 	
 	//floor
 	d = new Plane(float3(1,1,1), float3(0, boxSize,0), float3(0, -boxSize, 5));
-	d->color = Color(0, 0, 1);
+	d->smoothness = 0.9f;
+	d->color = Color(0, 0, 0);
 
 	////ceiling
 	//d = new Plane(float3(1, 1, 1), float3(0, -boxSize, 0), float3(0, boxSize, 5));
@@ -930,26 +920,6 @@ int main()
 					waitWorkerFlags[i] = false;
 				}
 			}
-
-			//if (finished1 && finished2 && finished3 && finished4) {
-			//	SDL_UpdateWindowSurface(window);
-			//	auto t2 = std::chrono::high_resolution_clock::now();
-			//	frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-			//	delta = frametime / 1000.0f;
-			//	fps = 1000.0f / frametime;
-			//	cout << "frametime: " << frametime << "\n";
-			//	cout << "delta: " << delta << "\n";
-			//	cout << "fps: " << fps << "\n";;
-			//	t1 = std::chrono::high_resolution_clock::now();
-			//	finished1 = false;
-			//	finished2 = false;
-			//	finished3 = false;
-			//	finished4 = false;
-			//}
-			//else {
-			//	delta = 0;
-			//}
-
 #else
 #ifdef NOISYRENDER
 
@@ -991,6 +961,8 @@ int main()
 #endif //  MULTITHREAD
 		}
 	}
+
+	getchar();
 
 
 #ifdef MULTITHREAD
