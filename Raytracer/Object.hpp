@@ -5,7 +5,7 @@
 #include "Common.hpp"
 #include "json.hpp"
 #include "imgui.h"
-
+#include <math.h>
 
 using json = nlohmann::json;
 class Serializable abstract{
@@ -50,7 +50,7 @@ public:
 		imGuiFloat3[0] = transform.position.x;
 		imGuiFloat3[1] = transform.position.y;
 		imGuiFloat3[2] = transform.position.z;
-		ImGui::InputFloat3("Position", imGuiFloat3);
+		ImGui::DragFloat3("Position", imGuiFloat3, 0.1f);
 		transform.position.x = imGuiFloat3[0];
 		transform.position.y = imGuiFloat3[1];
 		transform.position.z = imGuiFloat3[2];
@@ -160,6 +160,72 @@ public:
 			hitResults.valid = true;
 		}
 		return hitResults;
+	}
+};
+
+class Box : public Object {
+private:
+	// Box: https://www.shadertoy.com/view/ld23DV
+	float iBox(float3 ro, float3 rd, float3 distBound, float3& normal,
+		float3 boxSize) const {
+		float3 m = sign(rd) / float3::Max(abs(rd), 1e-8);
+		float3 n = m * ro;
+		float3 k = abs(m) * boxSize;
+
+		float3 t1 = -n - k;
+		float3 t2 = -n + k;
+		float tN = max(max(t1.x, t1.y), t1.z);
+		float tF = min(min(t2.x, t2.y), t2.z);
+
+		if (tN > tF || tF <= 0.) {
+			return std::numeric_limits<float>().max();
+		}
+		else {
+			if (tN >= distBound.x && tN <= distBound.y) {
+				normal = -sign(rd) * step(t1.yzx(), t1) * step(t1.zxy(), t1);
+				return tN;
+			}
+			else if (tF >= distBound.x && tF <= distBound.y) {
+				normal = -sign(rd) * step(t1.yzx(), t1) * step(t1.zxy(), t1);
+				return tF;
+			}
+			else {
+				return std::numeric_limits<float>().max();
+			}
+		}
+	}
+
+public:
+	float3 size;
+	Box(float3 size) {
+		this->size = size;
+	}
+	void OnGUI() override {
+		Object::OnGUI();
+		float temp[3];
+		temp[0] = size.x;
+		temp[1] = size.y;
+		temp[2] = size.z;
+		ImGui::DragFloat3("Cube Size", temp, 0.1f);
+		size.x = temp[0];
+		size.y = temp[1];
+		size.z = temp[2];
+	}
+	json ToJSON() override {
+		json data = Object::ToJSON();
+		data["Renderer"] = { {"Type", "Cube"}, {"Size", json::array({size.x,size.y,size.z})}};
+		return data;
+	}
+
+	Rayhit Raytrace(const float3& rayOrigin, const float3& rayDir) const override {
+		float3 normal;
+		float dist = iBox(rayOrigin - transform.position, rayDir, float3(0,1000,0), normal, size);
+		Rayhit ret;
+		ret.normal = normal.Normalized();
+		ret.point = rayOrigin + rayDir * dist;
+		ret.distance = dist;
+		ret.valid = dist == std::numeric_limits<float>().max() ? false : true;
+		return ret;
 	}
 };
 

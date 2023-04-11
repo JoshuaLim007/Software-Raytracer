@@ -43,10 +43,18 @@ public:
 				if (value["Renderer"]["Type"] == "Sphere") {
 					obj = new Sphere(value["Renderer"]["Radius"], float3(position[0], position[1], position[2]));
 				}
+				else if (value["Renderer"]["Type"] == "Cube") {
+					obj = new Box(float3(
+						value["Renderer"]["Size"][0], 
+						value["Renderer"]["Size"][1],
+						value["Renderer"]["Size"][2]
+					));
+				}
 				else {
 					obj = new Object();
-					obj->transform.position = float3(position[0], position[1], position[2]);
 				}
+				
+				obj->transform.position = float3(position[0], position[1], position[2]);
 
 				if (value.contains("Material")) {
 					json material = value["Material"];

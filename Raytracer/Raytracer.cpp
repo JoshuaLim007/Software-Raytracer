@@ -20,9 +20,9 @@
 #include "imgui_impl_sdl2.h"
 
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
-#define THREADS 64
+#define SCREEN_WIDTH 500
+#define SCREEN_HEIGHT 500
+#define THREADS 8
 
 float SCREEN_SCALE = 1;
 int FOV = 55;
@@ -266,6 +266,20 @@ int main()
 	Transform camera;
 	camera.position = float3(0, 0, 0);
 	camera.RotateAboutAxis(0, WORDLRIGHT);
+	Object* d = new Box(float3(1,1,1));
+	d->transform.position = float3(0, 4, 5);
+	scene1.AddObject(d);
+	ObjectsToRender.push_back(d);
+
+	d = new Box(float3(1, 1, 1));
+	d->transform.position = float3(0, 4, 5);
+	scene1.AddObject(d);
+	ObjectsToRender.push_back(d);
+
+	d = new Box(float3(1, 1, 1));
+	d->transform.position = float3(0, 4, 5);
+	scene1.AddObject(d);
+	ObjectsToRender.push_back(d);
 
 	/*Object* d;
 	int s = 8;
