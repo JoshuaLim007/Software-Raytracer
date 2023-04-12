@@ -18,17 +18,19 @@
 #include "Scene.hpp"
 #include "imgui_impl_sdlrenderer.h"
 #include "imgui_impl_sdl2.h"
+#include "tinyfiledialogs.h"
 
 
-#define SCREEN_WIDTH 500
-#define SCREEN_HEIGHT 500
-#define THREADS 8
+#define SCREEN_WIDTH 1200
+#define SCREEN_HEIGHT 700
+#define THREADS 16
 
 float SCREEN_SCALE = 1;
 int FOV = 55;
 int MAXBOUNCES = 2;
 int TARGETFRAMES = 4096;
 int ACCUMULATIONFRAMES = 1;
+bool SIMPLEDRAW = true;
 
 #undef main
 
@@ -139,29 +141,32 @@ Color RaytraceScene(const float3& rayOrigin, const float3& rayDirection) {
 		return GetEnvironmentColor(rayDirection);
 	}
 
-	Color specularColor;
-	Color reflectionColor;
+	if (SIMPLEDRAW) {
+		Color reflectedColor = GetEnvironmentColor(rayDirection.Reflect(hit.rayHit.normal));
+		float k = hit.objectReference->material.SpecularAmount;
+		float s = hit.objectReference->material.Smoothness;
+		return hit.objectReference->material.BaseColor * (1-k) + reflectedColor * k * s + hit.objectReference->material.EmissiveColor;
+	}
 
 	Color incomingLight = hit.objectReference->material.EmissiveColor;
 	Color hitColor = hit.objectReference->material.BaseColor;
 	float3 sray = rayDirection;
+	bool specularProb = hit.objectReference->material.SpecularAmount >= ((float)rand() / RAND_MAX);
+
 	for (int i = 0; i < MAXBOUNCES; i++)
 	{
 		float3 reflectedRay = sray.Reflect(hit.rayHit.normal);
 		sray = (hit.rayHit.normal + GetRandomDirection()).Normalized();
-		bool specularProb = hit.objectReference->material.SpecularAmount >= ((float)rand() / RAND_MAX);
-
 		sray = float3::Lerp(sray, reflectedRay, hit.objectReference->material.Smoothness * specularProb);
-
 		hit = GetClosestObject(hit.rayHit.point + hit.rayHit.normal * .00001f, sray);
 		if (!hit.rayHit.valid) {
 			incomingLight += GetEnvironmentColor(sray) * hitColor;
 			break;
 		}
+		specularProb = hit.objectReference->material.SpecularAmount >= ((float)rand() / RAND_MAX);
 		incomingLight += hit.objectReference->material.EmissiveColor * hitColor;
 		hitColor *= Color::Lerp(hit.objectReference->material.BaseColor, hit.objectReference->material.SpecularColor, specularProb);
 	}
-	Color diffusedColor = incomingLight;
 
 	//float3 lightVector = float3(0, 1, 0).Normalized();
 	//Color lightColor = SunColor;
@@ -188,7 +193,7 @@ Color RaytraceScene(const float3& rayOrigin, const float3& rayDirection) {
 	//float3 brdf = float3(diffusedColor.r, diffusedColor.g, diffusedColor.b) * kd + cookTorrence * ks;
 	//Color outgoing = emmission + brdf + lightColor * float3::Dot(lightVector, hit.normal, true);
 
-	return diffusedColor;
+	return incomingLight;
 }
 
 #pragma region ThreadUniqueRandFunctions
@@ -266,20 +271,6 @@ int main()
 	Transform camera;
 	camera.position = float3(0, 0, 0);
 	camera.RotateAboutAxis(0, WORDLRIGHT);
-	Object* d = new Box(float3(1,1,1));
-	d->transform.position = float3(0, 4, 5);
-	scene1.AddObject(d);
-	ObjectsToRender.push_back(d);
-
-	d = new Box(float3(1, 1, 1));
-	d->transform.position = float3(0, 4, 5);
-	scene1.AddObject(d);
-	ObjectsToRender.push_back(d);
-
-	d = new Box(float3(1, 1, 1));
-	d->transform.position = float3(0, 4, 5);
-	scene1.AddObject(d);
-	ObjectsToRender.push_back(d);
 
 	/*Object* d;
 	int s = 8;
@@ -380,46 +371,83 @@ int main()
 		}
 		// thread safe after this point
 
-
 		ImGui_ImplSDLRenderer_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 		{
 			static float f = 0.0f;
 			static int counter = 0;
-			ImGui::Begin("Inspector");     
-			if (selectedObject != NULL) {
-				doSetFrame = true;
-				selectedObject->OnGUI();
+			ImGui::Begin("Inspector");  
+			if (ImGui::BeginMenu("Scene File"))
+			{
+				if (ImGui::MenuItem("Open..", "Ctrl+O")) { 
+					//TCHAR wpath[MAX_PATH];
+					//char path[MAX_PATH];
+					//size_t nNumCharConverted;
+					//GetCurrentDirectory(MAX_PATH, wpath);
+					//wcstombs_s(&nNumCharConverted, path, MAX_PATH, wpath, MAX_PATH);
+					const char* ext = "*.json";
+					const char* const* extension = &ext;
+					char* filePath = tinyfd_openFileDialog("Open Scene", loadPath, 1, extension, NULL, 0);
+					if (filePath != NULL) {
+						strcpy_s(loadPath, filePath);
+						scene1.Unload();
+						scene1 = Scene(std::string(loadPath));
+						scene1.Load();
+						ObjectsToRender = scene1.GetObjects();
+						doSetFrame = true;
+						selectedObject = NULL;
+					}
+				}
+				if (ImGui::MenuItem("Save", "Ctrl+S")) { 
+					const char* ext = "*.json";
+					const char* const* extension = &ext;
+					char* filePath = tinyfd_saveFileDialog("Open Scene", savePath, 1, extension, NULL);
+					if (filePath != NULL) {
+						strcpy_s(savePath, filePath);
+						scene1.SaveAs(savePath);
+					}
+				}
+				ImGui::EndMenu();
 			}
-			ImGui::InputInt("Max Frames", &TARGETFRAMES);
-			int beforeValue = FOV;
-			ImGui::SliderInt("FOV", &beforeValue, 15, 103);
-			if (beforeValue != FOV) {
-				FOV = beforeValue;
-				doSetFrame = true;
-			}
-			beforeValue = MAXBOUNCES;
-			ImGui::InputInt("Light Bounces", &beforeValue);
-			if (beforeValue != MAXBOUNCES) {
-				MAXBOUNCES = beforeValue;
-				doSetFrame = true;
-			}
-			ImGui::SliderFloat("Render Scale", &SCREEN_SCALE, 0.25f, 1.0f);
 
-			ImGui::InputText("Save File", savePath, 512);
-			if (ImGui::Button("Save Scene")) {
-				scene1.SaveAs(savePath);
+			if (selectedObject != NULL) {
+				if (ImGui::CollapsingHeader("Object Properties")) {
+					doSetFrame = true;
+					selectedObject->OnGUI();
+				}
 			}
-			ImGui::InputText("Load File", loadPath, 512);
-			if (ImGui::Button("Load Scene")) {
-				strcpy_s(savePath, loadPath);
-				scene1.Unload();
-				scene1 = Scene(std::string(loadPath));
-				scene1.Load();
-				ObjectsToRender = scene1.GetObjects();
-				doSetFrame = true;
-				selectedObject = NULL;
+			if (ImGui::CollapsingHeader("Settings")) {
+				if (ImGui::Button("Switch Render Mode")) {
+					SIMPLEDRAW = !SIMPLEDRAW;
+					doSetFrame = true;
+				}
+
+				ImGui::InputInt("Max Frames", &TARGETFRAMES);
+				int beforeValue = FOV;
+				ImGui::SliderInt("FOV", &beforeValue, 15, 103);
+				if (beforeValue != FOV) {
+					FOV = beforeValue;
+					doSetFrame = true;
+				}
+				beforeValue = MAXBOUNCES;
+				ImGui::InputInt("Light Bounces", &beforeValue);
+				if (beforeValue != MAXBOUNCES) {
+					MAXBOUNCES = beforeValue;
+					MAXBOUNCES = max(MAXBOUNCES, 0);
+					doSetFrame = true;
+				}
+
+				ImGui::SliderFloat("Render Scale", &SCREEN_SCALE, 0.25f, 1.0f);
+				if (SIMPLEDRAW) {
+					SCREEN_SCALE = SDL_clamp(SCREEN_SCALE, 0.25f, 0.5f);
+				}
+
+				ImGui::InputText("Save File", savePath, 512);
+				if (ImGui::Button("Save Scene")) {
+					scene1.SaveAs(savePath);
+				}
+
 			}
 
 			ImGui::Text("Application average %.3f \nms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
@@ -482,7 +510,7 @@ int main()
 		auto t2 = std::chrono::high_resolution_clock::now();
 		frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 		delta = frametime / 1000.0f;
-		totalframetime += delta;
+		totalframetime += SIMPLEDRAW ? 0 : delta;
 		fps = 1000.0f / frametime;
 		std::string titleContent = "";
 		titleContent += "fps: " + std::to_string(fps) + " | ";
@@ -508,7 +536,7 @@ int main()
 				setFrame = true;
 			}
 			progressiveResolutionScaler = 1;
-			ACCUMULATIONFRAMES++;
+			ACCUMULATIONFRAMES += SIMPLEDRAW ? 0 : 1;
 		}
 		//resume thread render
 		for (size_t i = 0; i < THREADS; i++)

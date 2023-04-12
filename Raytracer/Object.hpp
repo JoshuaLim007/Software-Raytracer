@@ -219,9 +219,9 @@ public:
 
 	Rayhit Raytrace(const float3& rayOrigin, const float3& rayDir) const override {
 		float3 normal;
-		float dist = iBox(rayOrigin - transform.position, rayDir, float3(0,1000,0), normal, size);
+		float dist = iBox(rayOrigin - transform.position, rayDir, float3(0.01,10000,0), normal, size);
 		Rayhit ret;
-		ret.normal = normal.Normalized();
+		ret.normal = normal;
 		ret.point = rayOrigin + rayDir * dist;
 		ret.distance = dist;
 		ret.valid = dist == std::numeric_limits<float>().max() ? false : true;

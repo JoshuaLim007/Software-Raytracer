@@ -317,13 +317,16 @@ struct Rayhit {
 
 
 float3 sign(float3 t){
-	return float3(t.x / abs(t.x), t.y / abs(t.y), t.z / abs(t.z));
+	return float3(
+		t.x != 0 ? t.x / abs(t.x) : 0, 
+		t.y != 0 ? t.y / abs(t.y) : 0, 
+		t.z != 0 ? t.z / abs(t.z) : 0);
 }
 float3 abs(float3 t){
 	return float3(abs(t.x), abs(t.y), abs(t.z));
 }
 float3 step(float3 edge, float3 t0){
-	return float3(edge.x < t0.x ? 1 : 0, edge.y < t0.y ? 1 : 0, edge.z < t0.z ? 1 : 0);
+	return float3(edge.x <= t0.x ? 1 : 0, edge.y <= t0.y ? 1 : 0, edge.z <= t0.z ? 1 : 0);
 }
 
 #undef max
