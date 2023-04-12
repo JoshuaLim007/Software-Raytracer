@@ -4,262 +4,6 @@
         {
             "Material": {
                 "Color": [
-                    0.9647058844566345,
-                    0.15294118225574493,
-                    0.14901961386203766
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                3.0
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.08235294371843338,
-                    0.5921568870544434,
-                    0.5215686559677124
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                3.299999952316284
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.8235294222831726,
-                    0.11372549086809158,
-                    0.6784313917160034
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                3.5999999046325684
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.7686274647712708,
-                    0.8666666746139526,
-                    0.5803921818733215
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                3.9000000953674316
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.2235294133424759,
-                    0.09803921729326248,
-                    0.4627451002597809
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                4.199999809265137
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.6784313917160034,
-                    0.9450980424880981,
-                    0.1921568661928177
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                4.5
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.9411764740943909,
-                    0.3450980484485626,
-                    0.7098039388656616
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                4.800000190734863
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.19607843458652496,
-                    0.5921568870544434,
-                    0.5764706134796143
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -2.4000000953674316,
-                -1.0,
-                5.099999904632568
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
                     0.8196078538894653,
                     0.16862745583057404,
                     0.09803921729326248
@@ -270,7 +14,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -301,9 +45,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -334,7 +78,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -366,7 +110,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -397,9 +141,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -429,9 +173,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -452,38 +196,6 @@
         {
             "Material": {
                 "Color": [
-                    0.4274509847164154,
-                    0.8745098114013672,
-                    0.24705882370471954
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -1.7999999523162842,
-                -1.0,
-                4.800000190734863
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
                     0.529411792755127,
                     0.7058823704719543,
                     0.40784314274787903
@@ -494,7 +206,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -553,8 +265,8 @@
                     0.8627451062202454
                 ],
                 "Emissive": [
-                    0.0,
-                    0.0,
+                    15.0,
+                    15.0,
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
@@ -612,38 +324,6 @@
         {
             "Material": {
                 "Color": [
-                    0.250980406999588,
-                    0.10588235408067703,
-                    0.0313725508749485
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                -1.2000000476837158,
-                -1.0,
-                3.9000000953674316
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
                     0.1882352977991104,
                     0.21960784494876862,
                     0.3843137323856354
@@ -681,8 +361,8 @@
                     0.30588236451148987
                 ],
                 "Emissive": [
-                    0.0,
-                    0.0,
+                    15.0,
+                    15.0,
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
@@ -781,9 +461,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -845,9 +525,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -909,9 +589,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1038,7 +718,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.46399998664855957,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -1069,9 +749,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "Metalness": 1.0,
+                "Smoothness": 0.38499999046325684,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1102,7 +782,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.4690000116825104,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -1129,13 +809,13 @@
                     0.49803921580314636
                 ],
                 "Emissive": [
-                    0.0,
-                    0.0,
+                    15.0,
+                    15.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "Metalness": 1.0,
+                "Smoothness": 0.492000013589859,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1166,7 +846,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.5080000162124634,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -1293,9 +973,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1357,9 +1037,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1421,9 +1101,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1572,38 +1252,6 @@
         {
             "Material": {
                 "Color": [
-                    0.9098039269447327,
-                    0.34117648005485535,
-                    0.14901961386203766
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                1.2000000476837158,
-                -1.0,
-                3.299999952316284
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
                     0.5058823823928833,
                     0.8784313797950745,
                     0.9843137264251709
@@ -1613,9 +1261,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1627,38 +1275,6 @@
                 1.2000000476837158,
                 -1.0,
                 3.5999999046325684
-            ],
-            "Renderer": {
-                "Radius": 0.20000000298023224,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    0.7803921699523926,
-                    0.46666666865348816,
-                    0.6235294342041016
-                ],
-                "Emissive": [
-                    0.0,
-                    0.0,
-                    0.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                1.2000000476837158,
-                -1.0,
-                3.9000000953674316
             ],
             "Renderer": {
                 "Radius": 0.20000000298023224,
@@ -1705,8 +1321,8 @@
                     0.8039215803146362
                 ],
                 "Emissive": [
-                    0.0,
-                    0.0,
+                    15.0,
+                    15.0,
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
@@ -1806,7 +1422,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -1837,9 +1453,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1870,7 +1486,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -1902,7 +1518,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -1933,9 +1549,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
+                "Metalness": 1.0,
                 "Smoothness": 1.0,
-                "SpecularAmount": 0.10000000149011612,
+                "SpecularAmount": 1.0,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -1966,7 +1582,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -1998,7 +1614,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -2030,7 +1646,7 @@
                     0.0
                 ],
                 "Metalness": 0.10000000149011612,
-                "Smoothness": 1.0,
+                "Smoothness": 0.0,
                 "SpecularAmount": 0.10000000149011612,
                 "SpecularColor": [
                     1.0,
@@ -2061,9 +1677,9 @@
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 0.5,
-                "SpecularAmount": 0.10000000149011612,
+                "Metalness": 0.7710000276565552,
+                "Smoothness": 0.7540000081062317,
+                "SpecularAmount": 0.7710000276565552,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -2084,50 +1700,18 @@
         {
             "Material": {
                 "Color": [
-                    1.0,
-                    1.0,
-                    1.0
-                ],
-                "Emissive": [
-                    50.0,
-                    50.0,
-                    50.0
-                ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 0.5,
-                "SpecularAmount": 0.10000000149011612,
-                "SpecularColor": [
-                    1.0,
-                    1.0,
-                    1.0
-                ]
-            },
-            "Name": "",
-            "Position": [
-                4.0,
-                4.0,
-                8.0
-            ],
-            "Renderer": {
-                "Radius": 2.0,
-                "Type": "Sphere"
-            }
-        },
-        {
-            "Material": {
-                "Color": [
-                    1.0,
-                    1.0,
-                    1.0
+                    0.48163264989852905,
+                    0.48163264989852905,
+                    0.48163264989852905
                 ],
                 "Emissive": [
                     0.0,
                     0.0,
                     0.0
                 ],
-                "Metalness": 0.10000000149011612,
-                "Smoothness": 0.5,
-                "SpecularAmount": 0.10000000149011612,
+                "Metalness": 0.7369999885559082,
+                "Smoothness": 0.7379999756813049,
+                "SpecularAmount": 0.7369999885559082,
                 "SpecularColor": [
                     1.0,
                     1.0,
@@ -2148,14 +1732,194 @@
         {
             "Material": {
                 "Color": [
+                    0.4979591965675354,
+                    0.4979591965675354,
+                    0.4979591965675354
+                ],
+                "Emissive": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "Metalness": 1.0,
+                "Smoothness": 1.0,
+                "SpecularAmount": 1.0,
+                "SpecularColor": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            },
+            "Name": "",
+            "Position": [
+                -3.0,
+                4.0,
+                5.0
+            ],
+            "Renderer": {
+                "Size": [
+                    0.20000000298023224,
+                    5.300000190734863,
+                    6.800000190734863
+                ],
+                "Type": "Cube"
+            }
+        },
+        {
+            "Material": {
+                "Color": [
+                    0.5087718963623047,
+                    0.5087718963623047,
+                    0.5087718963623047
+                ],
+                "Emissive": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "Metalness": 1.0,
+                "Smoothness": 1.0,
+                "SpecularAmount": 1.0,
+                "SpecularColor": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            },
+            "Name": "",
+            "Position": [
+                2.799999952316284,
+                4.0,
+                5.0
+            ],
+            "Renderer": {
+                "Size": [
+                    0.20000000298023224,
+                    7.400000095367432,
+                    5.5
+                ],
+                "Type": "Cube"
+            }
+        },
+        {
+            "Material": {
+                "Color": [
+                    0.49122804403305054,
+                    0.49122804403305054,
+                    0.49122804403305054
+                ],
+                "Emissive": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "Metalness": 1.0,
+                "Smoothness": 1.0,
+                "SpecularAmount": 1.0,
+                "SpecularColor": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            },
+            "Name": "",
+            "Position": [
+                0.0,
+                1.7999999523162842,
+                5.0
+            ],
+            "Renderer": {
+                "Size": [
+                    6.099999904632568,
+                    0.30000001192092896,
+                    7.599999904632568
+                ],
+                "Type": "Cube"
+            }
+        },
+        {
+            "Material": {
+                "Color": [
+                    0.47755104303359985,
+                    0.47755104303359985,
+                    0.47755104303359985
+                ],
+                "Emissive": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "Metalness": 1.0,
+                "Smoothness": 1.0,
+                "SpecularAmount": 1.0,
+                "SpecularColor": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            },
+            "Name": "",
+            "Position": [
+                -0.10361674427986145,
+                0.04899999871850014,
+                8.119000434875488
+            ],
+            "Renderer": {
+                "Size": [
+                    3.5999999046325684,
+                    3.0,
+                    1.7000000476837158
+                ],
+                "Type": "Cube"
+            }
+        },
+        {
+            "Material": {
+                "Color": [
+                    0.518367350101471,
+                    0.518367350101471,
+                    0.518367350101471
+                ],
+                "Emissive": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "Metalness": 1.0,
+                "Smoothness": 1.0,
+                "SpecularAmount": 1.0,
+                "SpecularColor": [
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            },
+            "Name": "",
+            "Position": [
+                0.03692561388015747,
+                0.24400000274181366,
+                1.277999997138977
+            ],
+            "Renderer": {
+                "Size": [
+                    3.0999999046325684,
+                    2.5,
+                    1.0
+                ],
+                "Type": "Cube"
+            }
+        },
+        {
+            "Material": {
+                "Color": [
                     1.0,
                     1.0,
                     1.0
                 ],
                 "Emissive": [
-                    32.0,
-                    32.0,
-                    0.0
+                    18.0,
+                    18.0,
+                    18.0
                 ],
                 "Metalness": 0.0,
                 "Smoothness": 0.5,
@@ -2168,15 +1932,15 @@
             },
             "Name": "",
             "Position": [
-                0.0,
-                4.0,
-                5.0
+                0.017999999225139618,
+                1.7888000011444092,
+                4.627999782562256
             ],
             "Renderer": {
                 "Size": [
                     1.0,
-                    1.0,
-                    1.0
+                    0.30000001192092896,
+                    0.30000001192092896
                 ],
                 "Type": "Cube"
             }

@@ -4,8 +4,17 @@
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
-#define max(a,b) ((((a) > (b)) ? (a) : (b)))
-#define min(a,b) ((((a) < (b)) ? (a) : (b)))
+
+
+template <class T>
+bool delete_from_vector(std::vector<T> &vector, T toRemove) {
+	auto res = std::find(vector.begin(), vector.end(), toRemove);
+	if (res != vector.end()) {
+		vector.erase(res);
+		return true;
+	}
+	return false;
+}
 
 float flerpf(float a, float b, float t) {
 	return a * (1 - t) + b * t;
@@ -53,7 +62,12 @@ struct float3 {
 	inline float3 yz() {
 		return float3(0, y, z);
 	}
-
+	inline float3 yzx(){
+		return float3(y,z,x);
+	}
+	inline float3 zxy(){
+		return float3(z,x,y);
+	}
 
 	float3(float x, float y, float z) {
 		this->x = x;
@@ -84,10 +98,16 @@ struct float3 {
 		return float3(flerpf(a(0), b(0), t), flerpf(a(1), b(1), t), flerpf(a(2), b(2), t));
 	}
 
+
 	float3() {
 		x = 0;
 		y = 0;
 		z = 0;
+	}
+	float3(float x) {
+		this->x = x;
+		this->y = x;
+		this->z = x;
 	}
 	float3 operator-(const float3& rhs) const {
 		return float3(x - rhs.x, y - rhs.y, z - rhs.z);
@@ -98,11 +118,11 @@ struct float3 {
 	float3 operator+(const float3& rhs) const {
 		return float3(x + rhs.x, y + rhs.y, z + rhs.z);
 	}
-	float3 operator*(const float& rhs) const {
-		return float3(x * rhs, y * rhs, z * rhs);
+	float3 operator*(const float3& o) const {
+		return float3(x * o(0), y * o(1), z * o(2));
 	}
-	float3 operator/(const float& rhs) const {
-		return float3(x / rhs, y / rhs, z / rhs);
+	float3 operator/(const float3& o) const {
+		return float3(x / o(0), y / o(1), z / o(2));
 	}
 
 	float3& operator-=(const float3& rhs) {
@@ -122,19 +142,39 @@ struct float3 {
 		return *this;
 	}
 
-	float3 operator*(const float3& o) {
-		return float3(x * o(0), y * o(1), z * o(2));
-	}
+
 	bool operator != (const float3& rhs) {
 		return x != rhs.x || y != rhs.y || z != rhs.z;
 	}
-
+	float3 operator>(const float3& o) {
+		return float3(x > o.x ? x : o.x,
+			y > o.y ? y : o.y,
+			z > o.z ? z : o.z);
+	}
+	float3 operator>(const float& o) {
+		return float3(x > o ? x : o,
+			y > o ? y : o,
+			z > o ? z : o);
+	}
 	float3 Normalized() {
 		float length = Magnitude();
 		return float3(x / length, y / length, z / length);
 	}
 	float3 Reflect(const float3& normal) const {
 		return *this - normal * (2 * (float3::Dot(*this, normal)));
+	}
+
+	static float3 Max(const float3& a, const float3& o) {
+		return float3(
+			a.x > o.x ? a.x : o.x,
+			a.y > o.y ? a.y : o.y,
+			a.z > o.z ? a.z : o.z);
+	}
+	static float3 Min(const float3& a, const float3& o) {
+		return float3(
+			a.x < o.x ? a.x : o.x,
+			a.y < o.y ? a.y : o.y,
+			a.z < o.z ? a.z : o.z);
 	}
 };
 struct Color {
@@ -283,5 +323,31 @@ struct Rayhit {
 	float3 point;
 	float distance;
 };
+
+
+float3 sign(float3 t){
+	return float3(
+		t.x != 0 ? t.x / abs(t.x) : 0, 
+		t.y != 0 ? t.y / abs(t.y) : 0, 
+		t.z != 0 ? t.z / abs(t.z) : 0);
+}
+float3 abs(float3 t){
+	return float3(abs(t.x), abs(t.y), abs(t.z));
+}
+float3 step(float3 edge, float3 t0){
+	return float3(edge.x <= t0.x ? 1 : 0, edge.y <= t0.y ? 1 : 0, edge.z <= t0.z ? 1 : 0);
+}
+
+#undef max
+#undef min
+
+template<class T>
+T max(T a, T b) {
+	return a > b ? a : b;
+}
+template<class T>
+T min(T a, T b) {
+	return a < b ? a : b;
+}
 
 #endif

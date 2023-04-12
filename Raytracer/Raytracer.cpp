@@ -18,17 +18,19 @@
 #include "Scene.hpp"
 #include "imgui_impl_sdlrenderer.h"
 #include "imgui_impl_sdl2.h"
+#include "tinyfiledialogs.h"
 
 
-#define SCREEN_WIDTH 1280
-#define SCREEN_HEIGHT 720
-#define THREADS 64
+#define SCREEN_WIDTH 1920
+#define SCREEN_HEIGHT 1080
+#define THREADS 16
 
-float SCREEN_SCALE = 1;
+float SCREEN_SCALE = .5;
 int FOV = 55;
 int MAXBOUNCES = 2;
 int TARGETFRAMES = 4096;
 int ACCUMULATIONFRAMES = 1;
+bool SIMPLEDRAW = true;
 
 #undef main
 
@@ -139,29 +141,33 @@ Color RaytraceScene(const float3& rayOrigin, const float3& rayDirection) {
 		return GetEnvironmentColor(rayDirection);
 	}
 
-	Color specularColor;
-	Color reflectionColor;
+	if (SIMPLEDRAW) {
+		Color reflectedColor = GetEnvironmentColor(rayDirection.Reflect(hit.rayHit.normal));
+		float k = hit.objectReference->material.SpecularAmount;
+		float s = hit.objectReference->material.Smoothness;
+		return hit.objectReference->material.BaseColor * (1-k) + reflectedColor * k * s + hit.objectReference->material.EmissiveColor;
+	}
 
 	Color incomingLight = hit.objectReference->material.EmissiveColor;
 	Color hitColor = hit.objectReference->material.BaseColor;
 	float3 sray = rayDirection;
+	bool specularProb = hit.objectReference->material.SpecularAmount >= ((float)rand() / RAND_MAX);
+
 	for (int i = 0; i < MAXBOUNCES; i++)
 	{
 		float3 reflectedRay = sray.Reflect(hit.rayHit.normal);
 		sray = (hit.rayHit.normal + GetRandomDirection()).Normalized();
-		bool specularProb = hit.objectReference->material.SpecularAmount >= ((float)rand() / RAND_MAX);
-
 		sray = float3::Lerp(sray, reflectedRay, hit.objectReference->material.Smoothness * specularProb);
-
+		sray = sray.Normalized();
 		hit = GetClosestObject(hit.rayHit.point + hit.rayHit.normal * .00001f, sray);
 		if (!hit.rayHit.valid) {
 			incomingLight += GetEnvironmentColor(sray) * hitColor;
 			break;
 		}
+		specularProb = hit.objectReference->material.SpecularAmount >= ((float)rand() / RAND_MAX);
 		incomingLight += hit.objectReference->material.EmissiveColor * hitColor;
 		hitColor *= Color::Lerp(hit.objectReference->material.BaseColor, hit.objectReference->material.SpecularColor, specularProb);
 	}
-	Color diffusedColor = incomingLight;
 
 	//float3 lightVector = float3(0, 1, 0).Normalized();
 	//Color lightColor = SunColor;
@@ -188,7 +194,7 @@ Color RaytraceScene(const float3& rayOrigin, const float3& rayDirection) {
 	//float3 brdf = float3(diffusedColor.r, diffusedColor.g, diffusedColor.b) * kd + cookTorrence * ks;
 	//Color outgoing = emmission + brdf + lightColor * float3::Dot(lightVector, hit.normal, true);
 
-	return diffusedColor;
+	return incomingLight;
 }
 
 #pragma region ThreadUniqueRandFunctions
@@ -252,6 +258,7 @@ int main()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigDragClickToInputText = true;
 	ImGui::StyleColorsDark();
 	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer_Init(renderer);
@@ -335,21 +342,11 @@ int main()
 	std::chrono::steady_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 	while (true) {
 		SDL_PumpEvents();
-		inputManager.Update();
+		inputManager.SetState();
 		ImGui_ImplSDL2_ProcessEvent(&e);
 
-		if (inputManager.OnKeyDown(SDL_SCANCODE_ESCAPE)) {
+		if (e.window.event == SDL_WINDOWEVENT_CLOSE) {
 			break;
-		}
-		if (inputManager.OnKeyDown(SDL_SCANCODE_P)) {
-			pause = !pause;
-		}
-
-		inputManager.GetMouseInput(mouseX, mouseY);
-		if (inputManager.OnMouse(SDL_BUTTON_RIGHT)) {
-			doSetFrame = true;
-			camera.RotateAboutAxis(mouseX * mouseSpeed * 0.03, WORLDUP);
-			camera.RotateAboutAxis(mouseY * mouseSpeed * 0.03, camera.right);
 		}
 
 		//check if all thread groups are done working on the render
@@ -367,45 +364,101 @@ int main()
 		// thread safe after this point
 
 
+		if (inputManager.OnKeyDown(SDL_SCANCODE_P)) {
+			pause = !pause;
+		}
+		inputManager.GetMouseInput(mouseX, mouseY);
+		if (inputManager.OnMouse(SDL_BUTTON_RIGHT)) {
+			doSetFrame = true;
+			camera.RotateAboutAxis(mouseX * mouseSpeed * 0.03, WORLDUP);
+			camera.RotateAboutAxis(mouseY * mouseSpeed * 0.03, camera.right);
+		}
+
 		ImGui_ImplSDLRenderer_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 		{
 			static float f = 0.0f;
 			static int counter = 0;
-			ImGui::Begin("Inspector");     
+			ImGui::Begin("Inspector");  
+			if (ImGui::BeginMenu("Scene File"))
+			{
+				if (ImGui::MenuItem("Open..", "Ctrl+O")) { 
+					//TCHAR wpath[MAX_PATH];
+					//char path[MAX_PATH];
+					//size_t nNumCharConverted;
+					//GetCurrentDirectory(MAX_PATH, wpath);
+					//wcstombs_s(&nNumCharConverted, path, MAX_PATH, wpath, MAX_PATH);
+					const char* ext = "*.json";
+					const char* const* extension = &ext;
+					char* filePath = tinyfd_openFileDialog("Open Scene", loadPath, 1, extension, NULL, 0);
+					if (filePath != NULL) {
+						strcpy_s(loadPath, filePath);
+						scene1.Unload();
+						scene1 = Scene(std::string(loadPath));
+						scene1.Load();
+						ObjectsToRender = scene1.GetObjects();
+						doSetFrame = true;
+						selectedObject = NULL;
+					}
+				}
+				if (ImGui::MenuItem("Save", "Ctrl+S")) { 
+					const char* ext = "*.json";
+					const char* const* extension = &ext;
+					char* filePath = tinyfd_saveFileDialog("Open Scene", savePath, 1, extension, NULL);
+					if (filePath != NULL) {
+						strcpy_s(savePath, filePath);
+						scene1.SaveAs(savePath);
+					}
+				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Create"))
+			{
+				if (ImGui::MenuItem("Cube")) {
+					selectedObject = new Box(float3(1, 1, 1));
+					selectedObject->transform.position = camera.position + camera.forward * 5;
+					ObjectsToRender.push_back(selectedObject);
+					scene1.AddObject(selectedObject);
+				}
+				if (ImGui::MenuItem("Sphere")) {
+					selectedObject = new Sphere(.5f, camera.position + camera.forward * 5);
+					ObjectsToRender.push_back(selectedObject);
+					scene1.AddObject(selectedObject);
+				}
+				ImGui::EndMenu();
+			}
 			if (selectedObject != NULL) {
-				doSetFrame = true;
-				selectedObject->OnGUI();
+				if (ImGui::CollapsingHeader("Object Properties")) {
+					doSetFrame = true;
+					selectedObject->OnGUI();
+				}
 			}
-			ImGui::InputInt("Max Frames", &TARGETFRAMES);
-			int beforeValue = FOV;
-			ImGui::SliderInt("FOV", &beforeValue, 15, 103);
-			if (beforeValue != FOV) {
-				FOV = beforeValue;
-				doSetFrame = true;
-			}
-			beforeValue = MAXBOUNCES;
-			ImGui::InputInt("Light Bounces", &beforeValue);
-			if (beforeValue != MAXBOUNCES) {
-				MAXBOUNCES = beforeValue;
-				doSetFrame = true;
-			}
-			ImGui::SliderFloat("Render Scale", &SCREEN_SCALE, 0.25f, 1.0f);
+			if (ImGui::CollapsingHeader("Settings")) {
+				if (ImGui::Button("Switch Render Mode")) {
+					SIMPLEDRAW = !SIMPLEDRAW;
+					doSetFrame = true;
+				}
 
-			ImGui::InputText("Save File", savePath, 512);
-			if (ImGui::Button("Save Scene")) {
-				scene1.SaveAs(savePath);
-			}
-			ImGui::InputText("Load File", loadPath, 512);
-			if (ImGui::Button("Load Scene")) {
-				strcpy_s(savePath, loadPath);
-				scene1.Unload();
-				scene1 = Scene(std::string(loadPath));
-				scene1.Load();
-				ObjectsToRender = scene1.GetObjects();
-				doSetFrame = true;
-				selectedObject = NULL;
+				ImGui::InputInt("Max Frames", &TARGETFRAMES);
+				int beforeValue = FOV;
+				ImGui::SliderInt("FOV", &beforeValue, 15, 103);
+				if (beforeValue != FOV) {
+					FOV = beforeValue;
+					doSetFrame = true;
+				}
+				beforeValue = MAXBOUNCES;
+				ImGui::InputInt("Light Bounces", &beforeValue);
+				if (beforeValue != MAXBOUNCES) {
+					MAXBOUNCES = beforeValue;
+					MAXBOUNCES = max(MAXBOUNCES, 0);
+					doSetFrame = true;
+				}
+
+				ImGui::SliderFloat("Render Scale", &SCREEN_SCALE, 0.25f, 1.0f);
+				if (SIMPLEDRAW) {
+					SCREEN_SCALE = SDL_clamp(SCREEN_SCALE, 0.25f, 0.5f);
+				}
 			}
 
 			ImGui::Text("Application average %.3f \nms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
@@ -413,6 +466,15 @@ int main()
 		}
 
 		if (!io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+			if (selectedObject != NULL) {
+				if (inputManager.OnKeyDown(SDL_SCANCODE_DELETE)) {
+					scene1.RemoveObject(selectedObject);
+					delete_from_vector(ObjectsToRender, selectedObject);
+					delete selectedObject;
+					selectedObject = NULL;
+					doSetFrame = true;
+				}
+			}
 			float speed = moveSpeed * delta;
 			float3 previousPos = camera.position;
 			if (inputManager.OnKey(SDL_SCANCODE_LSHIFT)) {
@@ -439,7 +501,7 @@ int main()
 			if (camera.position != previousPos) {
 				doSetFrame = true;
 			}
-			if (inputManager.OnMouse(SDL_BUTTON_LEFT)) {
+			if (inputManager.OnMouseDown(SDL_BUTTON_LEFT)) {
 				int x, y;
 				inputManager.GetMouseScreenPosition(x, y);
 				y = SCREEN_HEIGHT - y;
@@ -456,6 +518,8 @@ int main()
 
 		}
 
+
+
 		renderTexture = SDL_CreateTextureFromSurface(renderer, renderSurface);
 		ImGui::Render();
 		SDL_RenderSetScale(renderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
@@ -468,13 +532,15 @@ int main()
 		auto t2 = std::chrono::high_resolution_clock::now();
 		frametime = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 		delta = frametime / 1000.0f;
-		totalframetime += delta;
+		totalframetime += SIMPLEDRAW ? 0 : delta;
 		fps = 1000.0f / frametime;
 		std::string titleContent = "";
 		titleContent += "fps: " + std::to_string(fps) + " | ";
 		titleContent += "total time (seconds): " + std::to_string(totalframetime) + " | ";
 		titleContent += "ACCUMULATIONFRAMES: " + std::to_string(ACCUMULATIONFRAMES) + " | ";
 		SDL_SetWindowTitle(window, titleContent.c_str());
+		inputManager.ResetState();
+
 		t1 = std::chrono::high_resolution_clock::now();
 		
 		if (pause || ACCUMULATIONFRAMES == TARGETFRAMES) {
@@ -494,7 +560,7 @@ int main()
 				setFrame = true;
 			}
 			progressiveResolutionScaler = 1;
-			ACCUMULATIONFRAMES++;
+			ACCUMULATIONFRAMES += SIMPLEDRAW ? 0 : 1;
 		}
 		//resume thread render
 		for (size_t i = 0; i < THREADS; i++)

@@ -39,6 +39,9 @@
     <ClCompile Include="imgui_widgets.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="tinyfiledialogs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="nlohmann\json.hpp">
@@ -73,6 +76,9 @@
     </ClInclude>
     <ClInclude Include="imgui_internal.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="tinyfiledialogs.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

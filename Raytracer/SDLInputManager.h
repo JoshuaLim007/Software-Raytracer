@@ -8,6 +8,7 @@ struct SDLInputManager {
 private:
 	int xM = 0, yM = 0;
 	int xP = 0, yP = 0;
+	bool gatheredMouseMove = false;
 	SDL_Event* e;
 
 	bool KeyDown[SDL_NUM_SCANCODES];
@@ -17,22 +18,12 @@ private:
 	bool mouseDown[256];
 	bool mouseUp[256];
 	bool mouseHeld[256];
-
-
 	void PollInput() {
 		int res = SDL_PollEvent(e);
-
-		for (size_t i = 0; i < 256; i++)
-		{
-			mouseDown[i] = false;
-			mouseUp[i] = false;
+		if (!gatheredMouseMove) {
+			SDL_GetRelativeMouseState(&xM, &yM);
+			gatheredMouseMove = true;
 		}
-		for (size_t i = 0; i < SDL_NUM_SCANCODES; i++)
-		{
-			KeyDown[i] = false;
-			KeyUp[i] = false;
-		}
-		SDL_GetRelativeMouseState(&xM, &yM);
 		if (e->button.type == SDL_MOUSEBUTTONDOWN) {
 			mouseDown[e->button.button] = true;
 			mouseHeld[e->button.button] = true;
@@ -47,12 +38,12 @@ private:
 		const Uint8* state = SDL_GetKeyboardState(NULL);
 		for (size_t i = 0; i < SDL_NUM_SCANCODES; i++)
 		{
-			if (state[i]) {
+			if (state[i] == 1) {
 				if (KeyHeld[i] == false) {
 					KeyDown[i] = true;
 				}
 			}
-			else {
+			else if (state[i] == 0) {
 				if (KeyHeld[i] == true) {
 					KeyUp[i] = true;
 				}
@@ -62,6 +53,19 @@ private:
 
 	}
 public:
+	void ResetState() {
+		gatheredMouseMove = false;
+		for (size_t i = 0; i < 256; i++)
+		{
+			mouseDown[i] = false;
+			mouseUp[i] = false;
+		}
+		for (size_t i = 0; i < SDL_NUM_SCANCODES; i++)
+		{
+			KeyDown[i] = false;
+			KeyUp[i] = false;
+		}
+	}
 	SDLInputManager(SDL_Event *e) {
 		this->e = e;
 		std::fill(std::begin(mouseHeld), std::end(mouseHeld), false);
@@ -71,7 +75,7 @@ public:
 		std::fill(std::begin(KeyUp), std::end(KeyUp), false);
 		std::fill(std::begin(KeyHeld), std::end(KeyHeld), false);
 	}
-	void Update() {
+	void SetState() {
 		PollInput();
 	}
 	bool OnKeyDown(const int& code) {
