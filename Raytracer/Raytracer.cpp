@@ -1,3 +1,4 @@
+#include <sys/stat.h>
 #include <limits>
 #include <iostream>
 #include <SDL.h>
@@ -11,6 +12,7 @@
 #include <filesystem>
 #include <cstring>
 #include <string>
+#include <fstream>
 
 #include "SDLInputManager.h"
 #include "Common.hpp"
@@ -21,8 +23,8 @@
 #include "tinyfiledialogs.h"
 
 
-#define SCREEN_WIDTH 1920
-#define SCREEN_HEIGHT 1080
+#define SCREEN_WIDTH 1000
+#define SCREEN_HEIGHT 800
 #define THREADS 16
 
 float SCREEN_SCALE = .5;
@@ -48,6 +50,7 @@ bool setFrame = false;
 SDL_Surface* renderSurface;
 SDL_Texture* renderTexture;
 SDL_Renderer* renderer;
+Object* selectedObject = NULL;
 
 float3 SunDirection = float3(1, -1, -1);
 Color SkyColor = Color(.2, .35, 1.0f) * 10.0f;
@@ -145,7 +148,15 @@ Color RaytraceScene(const float3& rayOrigin, const float3& rayDirection) {
 		Color reflectedColor = GetEnvironmentColor(rayDirection.Reflect(hit.rayHit.normal));
 		float k = hit.objectReference->material.SpecularAmount;
 		float s = hit.objectReference->material.Smoothness;
-		return hit.objectReference->material.BaseColor * (1-k) + reflectedColor * k * s + hit.objectReference->material.EmissiveColor;
+
+		float fresnal = 0;
+		if (hit.objectReference == selectedObject) {
+			fresnal = 1 - float3::Dot(-hit.rayHit.normal, rayDirection);
+			fresnal = max(fresnal, 0.0f);
+			fresnal = smoothstep(0.0f, 0.5f, fresnal);
+		}
+
+		return Color::Lerp(hit.objectReference->material.BaseColor * (1-k) + reflectedColor * k * s + hit.objectReference->material.EmissiveColor, Color(3,3,0), fresnal);
 	}
 
 	Color incomingLight = hit.objectReference->material.EmissiveColor;
@@ -262,6 +273,13 @@ int main()
 	ImGui::StyleColorsDark();
 	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer_Init(renderer);
+	
+	std::string sceneFolder = "./Scenes";
+	struct stat sb;
+	if (stat(sceneFolder.c_str(), &sb) != 0) {
+		CreateDirectoryA(sceneFolder.c_str(), NULL);
+	}
+
 #pragma endregion
 
 #pragma region SceneSetup
@@ -332,7 +350,6 @@ int main()
 	float moveSpeed = 1;
 	SDL_Event e;
 	auto inputManager = SDLInputManager(&e);
-	Object* selectedObject = NULL;
 
 	char savePath[512];
 	strcpy_s(savePath, scene1.GetFilePath().c_str());
@@ -502,17 +519,22 @@ int main()
 				doSetFrame = true;
 			}
 			if (inputManager.OnMouseDown(SDL_BUTTON_LEFT)) {
-				int x, y;
-				inputManager.GetMouseScreenPosition(x, y);
-				y = SCREEN_HEIGHT - y;
-
-				auto hit = GetClosestObject(camera.position, GetRayDirection(camera, x, y));
-
-				if (hit.rayHit.valid) {
-					selectedObject = hit.objectReference;
+				if (selectedObject != NULL) {
+					selectedObject = NULL;
 				}
 				else {
-					selectedObject = NULL;
+					int x, y;
+					inputManager.GetMouseScreenPosition(x, y);
+					y = SCREEN_HEIGHT - y;
+
+					auto hit = GetClosestObject(camera.position, GetRayDirection(camera, x, y));
+
+					if (hit.rayHit.valid) {
+						selectedObject = hit.objectReference;
+					}
+					else {
+						selectedObject = NULL;
+					}
 				}
 			}
 
