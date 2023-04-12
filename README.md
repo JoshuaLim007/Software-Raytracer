@@ -1,6 +1,4 @@
-
 # Software-Raytracer
- 
 Multi-threaded cpu software pathtracer. I know the repo is called software raytracer and not software pathtracer.
 
 **Binary Downloads**
