@@ -212,6 +212,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>%SDL2_DIR%\include;C:\Users\u619295\Developer Tools\SDL2-devel-2.0.22-VC\SDL2-2.0.22\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WholeProgramOptimization>false</WholeProgramOptimization>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
