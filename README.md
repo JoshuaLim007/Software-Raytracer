@@ -1,7 +1,7 @@
 
 # Software-Raytracer
  
-Multi-threaded software pathtracer. I know the repo is called software raytracer and not software pathtracer.
+Multi-threaded cpu software pathtracer. I know the repo is called software raytracer and not software pathtracer.
 
 **Binary Downloads**
 [Release Windows binary build · JoshuaLim007/Software-Raytracer (github.com)](https://github.com/JoshuaLim007/Software-Raytracer/releases/tag/Pre-Binary)
