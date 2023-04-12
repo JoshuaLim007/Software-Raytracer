@@ -54,13 +54,17 @@ public:
 		transform.position.x = imGuiFloat3[0];
 		transform.position.y = imGuiFloat3[1];
 		transform.position.z = imGuiFloat3[2];
-		imGuiFloat3[0] = material.BaseColor.r;
-		imGuiFloat3[1] = material.BaseColor.g;
-		imGuiFloat3[2] = material.BaseColor.b;
-		ImGui::ColorPicker3("Color", imGuiFloat3);
-		material.BaseColor.r = imGuiFloat3[0];
-		material.BaseColor.g = imGuiFloat3[1];
-		material.BaseColor.b = imGuiFloat3[2];
+
+		if (ImGui::CollapsingHeader("Base Color")) {
+			imGuiFloat3[0] = material.BaseColor.r;
+			imGuiFloat3[1] = material.BaseColor.g;
+			imGuiFloat3[2] = material.BaseColor.b;
+			ImGui::ColorPicker3("Color", imGuiFloat3);
+			material.BaseColor.r = imGuiFloat3[0];
+			material.BaseColor.g = imGuiFloat3[1];
+			material.BaseColor.b = imGuiFloat3[2];
+		}
+
 		imGuiFloat3[0] = material.EmissiveColor.r;
 		imGuiFloat3[1] = material.EmissiveColor.g;
 		imGuiFloat3[2] = material.EmissiveColor.b;

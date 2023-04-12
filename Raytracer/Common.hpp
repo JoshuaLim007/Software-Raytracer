@@ -4,8 +4,17 @@
 #define WORDLRIGHT float3(1,0,0)
 #define WORLDUP float3(0,1,0)
 #define WORLDFORWARD float3(0,0,1)
-//#define max(a,b) ((((a) > (b)) ? (a) : (b)))
-//#define min(a,b) ((((a) < (b)) ? (a) : (b)))
+
+
+template <class T>
+bool delete_from_vector(std::vector<T> &vector, T toRemove) {
+	auto res = std::find(vector.begin(), vector.end(), toRemove);
+	if (res != vector.end()) {
+		vector.erase(res);
+		return true;
+	}
+	return false;
+}
 
 float flerpf(float a, float b, float t) {
 	return a * (1 - t) + b * t;

@@ -21,11 +21,11 @@
 #include "tinyfiledialogs.h"
 
 
-#define SCREEN_WIDTH 1200
-#define SCREEN_HEIGHT 700
+#define SCREEN_WIDTH 1920
+#define SCREEN_HEIGHT 1080
 #define THREADS 16
 
-float SCREEN_SCALE = 1;
+float SCREEN_SCALE = .5;
 int FOV = 55;
 int MAXBOUNCES = 2;
 int TARGETFRAMES = 4096;
@@ -158,6 +158,7 @@ Color RaytraceScene(const float3& rayOrigin, const float3& rayDirection) {
 		float3 reflectedRay = sray.Reflect(hit.rayHit.normal);
 		sray = (hit.rayHit.normal + GetRandomDirection()).Normalized();
 		sray = float3::Lerp(sray, reflectedRay, hit.objectReference->material.Smoothness * specularProb);
+		sray = sray.Normalized();
 		hit = GetClosestObject(hit.rayHit.point + hit.rayHit.normal * .00001f, sray);
 		if (!hit.rayHit.valid) {
 			incomingLight += GetEnvironmentColor(sray) * hitColor;
@@ -257,6 +258,7 @@ int main()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigDragClickToInputText = true;
 	ImGui::StyleColorsDark();
 	ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
 	ImGui_ImplSDLRenderer_Init(renderer);
@@ -340,21 +342,11 @@ int main()
 	std::chrono::steady_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 	while (true) {
 		SDL_PumpEvents();
-		inputManager.Update();
+		inputManager.SetState();
 		ImGui_ImplSDL2_ProcessEvent(&e);
 
-		if (inputManager.OnKeyDown(SDL_SCANCODE_ESCAPE)) {
+		if (e.window.event == SDL_WINDOWEVENT_CLOSE) {
 			break;
-		}
-		if (inputManager.OnKeyDown(SDL_SCANCODE_P)) {
-			pause = !pause;
-		}
-
-		inputManager.GetMouseInput(mouseX, mouseY);
-		if (inputManager.OnMouse(SDL_BUTTON_RIGHT)) {
-			doSetFrame = true;
-			camera.RotateAboutAxis(mouseX * mouseSpeed * 0.03, WORLDUP);
-			camera.RotateAboutAxis(mouseY * mouseSpeed * 0.03, camera.right);
 		}
 
 		//check if all thread groups are done working on the render
@@ -370,6 +362,17 @@ int main()
 			continue;
 		}
 		// thread safe after this point
+
+
+		if (inputManager.OnKeyDown(SDL_SCANCODE_P)) {
+			pause = !pause;
+		}
+		inputManager.GetMouseInput(mouseX, mouseY);
+		if (inputManager.OnMouse(SDL_BUTTON_RIGHT)) {
+			doSetFrame = true;
+			camera.RotateAboutAxis(mouseX * mouseSpeed * 0.03, WORLDUP);
+			camera.RotateAboutAxis(mouseY * mouseSpeed * 0.03, camera.right);
+		}
 
 		ImGui_ImplSDLRenderer_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
@@ -410,7 +413,21 @@ int main()
 				}
 				ImGui::EndMenu();
 			}
-
+			if (ImGui::BeginMenu("Create"))
+			{
+				if (ImGui::MenuItem("Cube")) {
+					selectedObject = new Box(float3(1, 1, 1));
+					selectedObject->transform.position = camera.position + camera.forward * 5;
+					ObjectsToRender.push_back(selectedObject);
+					scene1.AddObject(selectedObject);
+				}
+				if (ImGui::MenuItem("Sphere")) {
+					selectedObject = new Sphere(.5f, camera.position + camera.forward * 5);
+					ObjectsToRender.push_back(selectedObject);
+					scene1.AddObject(selectedObject);
+				}
+				ImGui::EndMenu();
+			}
 			if (selectedObject != NULL) {
 				if (ImGui::CollapsingHeader("Object Properties")) {
 					doSetFrame = true;
@@ -442,12 +459,6 @@ int main()
 				if (SIMPLEDRAW) {
 					SCREEN_SCALE = SDL_clamp(SCREEN_SCALE, 0.25f, 0.5f);
 				}
-
-				ImGui::InputText("Save File", savePath, 512);
-				if (ImGui::Button("Save Scene")) {
-					scene1.SaveAs(savePath);
-				}
-
 			}
 
 			ImGui::Text("Application average %.3f \nms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
@@ -455,6 +466,15 @@ int main()
 		}
 
 		if (!io.WantCaptureMouse && !io.WantCaptureKeyboard) {
+			if (selectedObject != NULL) {
+				if (inputManager.OnKeyDown(SDL_SCANCODE_DELETE)) {
+					scene1.RemoveObject(selectedObject);
+					delete_from_vector(ObjectsToRender, selectedObject);
+					delete selectedObject;
+					selectedObject = NULL;
+					doSetFrame = true;
+				}
+			}
 			float speed = moveSpeed * delta;
 			float3 previousPos = camera.position;
 			if (inputManager.OnKey(SDL_SCANCODE_LSHIFT)) {
@@ -481,7 +501,7 @@ int main()
 			if (camera.position != previousPos) {
 				doSetFrame = true;
 			}
-			if (inputManager.OnMouse(SDL_BUTTON_LEFT)) {
+			if (inputManager.OnMouseDown(SDL_BUTTON_LEFT)) {
 				int x, y;
 				inputManager.GetMouseScreenPosition(x, y);
 				y = SCREEN_HEIGHT - y;
@@ -497,6 +517,8 @@ int main()
 			}
 
 		}
+
+
 
 		renderTexture = SDL_CreateTextureFromSurface(renderer, renderSurface);
 		ImGui::Render();
@@ -517,6 +539,8 @@ int main()
 		titleContent += "total time (seconds): " + std::to_string(totalframetime) + " | ";
 		titleContent += "ACCUMULATIONFRAMES: " + std::to_string(ACCUMULATIONFRAMES) + " | ";
 		SDL_SetWindowTitle(window, titleContent.c_str());
+		inputManager.ResetState();
+
 		t1 = std::chrono::high_resolution_clock::now();
 		
 		if (pause || ACCUMULATIONFRAMES == TARGETFRAMES) {
