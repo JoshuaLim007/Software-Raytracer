@@ -23,8 +23,8 @@
 #include "tinyfiledialogs.h"
 
 
-#define SCREEN_WIDTH 1000
-#define SCREEN_HEIGHT 800
+#define SCREEN_WIDTH 1280
+#define SCREEN_HEIGHT 720
 #define THREADS 16
 
 float SCREEN_SCALE = .5;
@@ -163,11 +163,15 @@ Color RaytraceScene(const float3& rayOrigin, const float3& rayDirection) {
 	Color hitColor = hit.objectReference->material.BaseColor;
 	float3 sray = rayDirection;
 	bool specularProb = hit.objectReference->material.SpecularAmount >= ((float)rand() / RAND_MAX);
-
+	const float lightEnergyDissipation = 0.8f;
 	for (int i = 0; i < MAXBOUNCES; i++)
 	{
+		if (i != 0) {
+			hitColor *= lightEnergyDissipation;
+		}
 		float3 reflectedRay = sray.Reflect(hit.rayHit.normal);
-		sray = (hit.rayHit.normal + GetRandomDirection()).Normalized();
+		//sray = (hit.rayHit.normal + GetRandomDirection()).Normalized();
+		sray = GetRandomNormalOrientedHemisphere(hit.rayHit.normal);
 		sray = float3::Lerp(sray, reflectedRay, hit.objectReference->material.Smoothness * specularProb);
 		sray = sray.Normalized();
 		hit = GetClosestObject(hit.rayHit.point + hit.rayHit.normal * .00001f, sray);
